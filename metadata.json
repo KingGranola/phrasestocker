@@ -1,0 +1,6 @@
+
+{
+  "name": "PhraseStocker",
+  "description": "Jazz phrase learning tool with score editor, auto-tab generation, and theory-based chord suggestions.",
+  "requestFramePermissions": []
+}
