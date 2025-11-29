@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PhraseStocker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            },
+            colors: {
+              border: "var(--border-color)",
+              panel: "var(--bg-panel)",
+              main: "var(--bg-body)",
+              accent: "var(--accent)",
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        /* Modern Dark Theme Palette (Slate based) */
+        --bg-body: #0f172a;   /* Slate 950 */
+        --bg-panel: #1e293b;  /* Slate 800 */
+        --bg-sub: #334155;    /* Slate 700 */
+        --bg-hover: #334155;
+        
+        --text-main: #f1f5f9; /* Slate 100 */
+        --text-muted: #94a3b8; /* Slate 400 */
+        --text-inverse: #ffffff;
+        
+        --border-color: #334155; /* Slate 700 */
+        
+        --accent: #3b82f6;       /* Blue 500 */
+        --accent-hover: #2563eb; /* Blue 600 */
+        --accent-text: #ffffff;
+        
+        --danger: #ef4444;       /* Red 500 */
+        
+        --radius: 8px;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      }
+
+      body { 
+        margin: 0; 
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Generic UI Classes */
+      .app-panel {
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+      }
+      
+      .app-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: transparent;
+        color: var(--text-muted);
+        border-radius: 6px;
+        transition: all 0.2s;
+        cursor: pointer;
+        font-weight: 500;
+        border: 1px solid transparent;
+      }
+      
+      .app-btn:hover:not(:disabled) {
+        background-color: var(--bg-hover);
+        color: var(--text-main);
+      }
+      
+      .app-btn:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+
+      .app-btn-primary {
+        background-color: var(--accent);
+        color: var(--accent-text);
+      }
+      .app-btn-primary:hover:not(:disabled) {
+        background-color: var(--accent-hover);
+      }
+      
+      .app-btn-active {
+        background-color: var(--accent) !important;
+        color: var(--accent-text) !important;
+        border-color: var(--accent) !important;
+      }
+
+      .app-input {
+        background-color: var(--bg-body);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        border-radius: 4px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .app-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent);
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar { width: 10px; height: 10px; }
+      ::-webkit-scrollbar-track { background: var(--bg-body); }
+      ::-webkit-scrollbar-thumb { 
+        background: var(--bg-sub); 
+        border-radius: 5px; 
+        border: 2px solid var(--bg-body);
+      }
+      ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+      /* Utility */
+      .section-header {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+      }
+
+      /* Custom Cursors */
+      
+      /* Pencil Cursor (Blue Accent) - Hotspot at bottom left tip */
+      .cursor-pencil {
+        cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMzYjgyZjYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTcgM2EyLjgyOCAyLjgyOCAwIDEgMSA0IDRMNy41IDIwLjUgMiAyMmwxLjUtNS41TDE3IDN6IiBmaWxsPSJyZ2JhKDU5L idealIDEzMCwgMjQ2LCAwLjEpIj48L3BhdGg+PC9zdmc+') 0 24, auto;
+      }
+
+      /* Eraser Cursor (Red Danger) - Hotspot near bottom */
+      .cursor-eraser {
+        cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNlZjQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJtMi45NyAxMi45MiA0LjA2IDQuMDZjLjM5LjM5IDEuMDIuMzkgMS40MSAwbDEyLjU5LTEyLjU5Yy4zOS0uMzkuMzktMS4wMiAwLTEuNDFsLTQuMDYtNC4wNmMtLjM5LS4zOS0xLjAyLS4zOS0xLjQxIDBMMi45NyAxMS41MWMtLjM5LjM5LS4zOSAxLjAyIDAgMS40MXoiIGZpbGw9InJnYmEoMjM5LCA2OCwgNjgsIDAuMSkiLz48cGF0aCBkPSJtNS44NiAxNy43Ny0zLjI0LTMuMjRhMiAyIDAgMCAxIDAtMi44M2w3LjA3LTcuMDdhMiAyIDAgMCAxIDIuODMgMGw3LjA3IDcuMDdhMiAyIDAgMCAxIDAgMi44M2wtMy4yNCAzLjI0Ii8+PC9zdmc+') 6 18, auto;
+      }
+
+      /* Select Cursor (Blue Arrow) - Matches Accent Color */
+      .cursor-select {
+        cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMCAwTDEwLjE1IDI1LjM3IDEzLjAzIDE0Ljk2IDI0IDEwLjE1IDAgMHoiIGZpbGw9IiMzYjgyZjYiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIsIDIpIHNjYWxlKDAuOCkiLz48L3N2Zz4=') 0 0, default;
+      }
+
+      /* Mobile Portrait Overlay Logic */
+      @media screen and (orientation: portrait) and (max-width: 1024px) {
+        .portrait-warning {
+          display: flex !important;
+        }
+      }
+
+    </style>
+
+<link rel="stylesheet" href="/index.css">
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "vexflow": "https://aistudiocdn.com/vexflow@^5.0.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "tone": "https://aistudiocdn.com/tone@^15.1.22",
+    "clsx": "https://aistudiocdn.com/clsx@^2.1.1"
+  }
+}
+</script>
+  <script type="module" crossorigin src="/phrasestocker/assets/index-sldSPld-.js"></script>
+</head>
+  <body class="h-screen overflow-hidden">
+    <div id="root" class="h-full"></div>
+</body>
+</html>

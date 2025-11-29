@@ -293,15 +293,28 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({
                                 <table className="w-full text-left">
                                     <thead className="bg-[var(--bg-sub)] text-[var(--text-muted)] font-bold"><tr><th className="p-3 pl-4">キー</th><th className="p-3">機能</th></tr></thead>
                                     <tbody className="divide-y divide-[var(--border-color)] text-[var(--text-main)]">
+                                        <tr className="bg-[var(--bg-body)]"><td colSpan={2} className="p-2 pl-4 text-xs font-bold text-[var(--accent)]">入力モード</td></tr>
                                         <tr><td className="p-3 pl-4 font-mono text-[var(--accent)] font-bold">N</td><td className="p-3">音符入力モード 切替</td></tr>
                                         <tr><td className="p-3 pl-4 font-mono text-[var(--accent)] font-bold">Esc</td><td className="p-3">選択モードへ戻る / 選択解除</td></tr>
-                                        <tr><td className="p-3 pl-4 font-mono">1 - 8</td><td className="p-3">音価選択 (1:全, 2:二, 4:四, 8:八)</td></tr>
+                                        <tr><td className="p-3 pl-4 font-mono">E</td><td className="p-3">Eraserモード 切替</td></tr>
+
+                                        <tr className="bg-[var(--bg-body)]"><td colSpan={2} className="p-2 pl-4 text-xs font-bold text-[var(--accent)]">音符プロパティ</td></tr>
+                                        <tr><td className="p-3 pl-4 font-mono">1 - 8</td><td className="p-3">音価選択 (1:全, 2:二, 4:四, 8:八, 6:16分)</td></tr>
                                         <tr><td className="p-3 pl-4 font-mono">. (ドット)</td><td className="p-3">付点 ON/OFF</td></tr>
+                                        <tr><td className="p-3 pl-4 font-mono">3</td><td className="p-3">3連符モード ON/OFF</td></tr>
                                         <tr><td className="p-3 pl-4 font-mono">0</td><td className="p-3">休符モード ON/OFF</td></tr>
-                                        <tr><td className="p-3 pl-4 font-mono">Space</td><td className="p-3">再生 / 停止</td></tr>
+
+                                        <tr className="bg-[var(--bg-body)]"><td colSpan={2} className="p-2 pl-4 text-xs font-bold text-[var(--accent)]">編集</td></tr>
+                                        <tr><td className="p-3 pl-4 font-mono">↑ / ↓</td><td className="p-3">選択中の音符を半音上下に移動</td></tr>
+                                        <tr><td className="p-3 pl-4 font-mono">Ctrl + ↑ / ↓</td><td className="p-3">TAB譜の弦を変更（音程維持）</td></tr>
+                                        <tr><td className="p-3 pl-4 font-mono">Delete / Backspace</td><td className="p-3">選択中の音符を削除</td></tr>
+
+                                        <tr className="bg-[var(--bg-body)]"><td colSpan={2} className="p-2 pl-4 text-xs font-bold text-[var(--accent)]">再生</td></tr>
+                                        <tr><td className="p-3 pl-4 font-mono text-[var(--accent)] font-bold">Space</td><td className="p-3">再生 / 停止</td></tr>
                                     </tbody>
                                 </table>
                             </div>
+                            <p className="text-xs text-[var(--text-muted)] text-center">※ 一部のショートカットは入力モード中のみ有効です</p>
                         </div>
                     )}
                 </div>
