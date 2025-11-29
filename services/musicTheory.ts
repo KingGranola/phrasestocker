@@ -11,21 +11,21 @@ export { getAllChords, getNoteDegree, isChordTone, getChordNotes } from './chord
 // ==========================================
 
 export const keyToMidi = (key: string): number => {
-  const [noteStr, octave] = key.split('/');
-  const noteMap: Record<string, number> = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
-  const root = noteStr.charAt(0).toLowerCase();
-  const accidental = noteStr.slice(1);
-  let base = noteMap[root];
-  if (accidental.includes('#')) base += 1;
-  if (accidental.includes('b')) base -= 1;
-  return base + (parseInt(octave) + 1) * 12;
+    const [noteStr, octave] = key.split('/');
+    const noteMap: Record<string, number> = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+    const root = noteStr.charAt(0).toLowerCase();
+    const accidental = noteStr.slice(1);
+    let base = noteMap[root];
+    if (accidental.includes('#')) base += 1;
+    if (accidental.includes('b')) base -= 1;
+    return base + (parseInt(octave) + 1) * 12;
 };
 
 export const midiToKey = (midi: number, keySignature: string): string => {
     const octave = Math.floor(midi / 12) - 1;
     const noteVal = midi % 12;
     const sharpNames = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b'];
-    const flatNames  = ['c', 'db', 'd', 'eb', 'e', 'f', 'gb', 'g', 'ab', 'a', 'bb', 'b'];
+    const flatNames = ['c', 'db', 'd', 'eb', 'e', 'f', 'gb', 'g', 'ab', 'a', 'bb', 'b'];
     const flatKeys = ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb'];
     const useFlat = flatKeys.includes(keySignature);
     const noteName = useFlat ? flatNames[noteVal] : sharpNames[noteVal];
@@ -36,8 +36,8 @@ export const shiftPitchVisual = (key: string, steps: number): string => {
     const [notePart, octaveStr] = key.split('/');
     const noteChar = notePart.charAt(0).toLowerCase();
     let octave = parseInt(octaveStr);
-    let noteIndex = NOTE_ORDER.indexOf(noteChar); 
-    for(let i = 0; i < Math.abs(steps); i++) {
+    let noteIndex = NOTE_ORDER.indexOf(noteChar);
+    for (let i = 0; i < Math.abs(steps); i++) {
         if (steps > 0) {
             noteIndex++;
             if (noteIndex > 6) { noteIndex = 0; octave++; }
@@ -56,27 +56,27 @@ export const shiftPitchChromatic = (key: string, semitones: number, keySignature
 };
 
 export const getYToKey = (relativeLine: number, clef: 'treble' | 'bass'): string => {
-  const config = CLEF_NOTE_MAP[clef];
-  const stepsDown = Math.round(relativeLine * 2); 
-  const topNoteIndex = NOTE_ORDER.indexOf(config.topNote); 
-  let currentIndex = (topNoteIndex - stepsDown);
-  let noteIndex = currentIndex % 7;
-  if (noteIndex < 0) noteIndex += 7;
-  const noteName = NOTE_ORDER[noteIndex];
-  let currentOctave = config.topOctave;
-  let ptr = topNoteIndex;
-  for (let i = 0; i < Math.abs(stepsDown); i++) {
-     if (stepsDown > 0) {
-         if (NOTE_ORDER[ptr] === 'c') currentOctave--;
-         ptr--;
-         if (ptr < 0) ptr = 6;
-     } else {
-         ptr++;
-         if (ptr > 6) ptr = 0;
-         if (NOTE_ORDER[ptr] === 'c') currentOctave++;
-     }
-  }
-  return `${noteName}/${currentOctave}`;
+    const config = CLEF_NOTE_MAP[clef];
+    const stepsDown = Math.round(relativeLine * 2);
+    const topNoteIndex = NOTE_ORDER.indexOf(config.topNote);
+    let currentIndex = (topNoteIndex - stepsDown);
+    let noteIndex = currentIndex % 7;
+    if (noteIndex < 0) noteIndex += 7;
+    const noteName = NOTE_ORDER[noteIndex];
+    let currentOctave = config.topOctave;
+    let ptr = topNoteIndex;
+    for (let i = 0; i < Math.abs(stepsDown); i++) {
+        if (stepsDown > 0) {
+            if (NOTE_ORDER[ptr] === 'c') currentOctave--;
+            ptr--;
+            if (ptr < 0) ptr = 6;
+        } else {
+            ptr++;
+            if (ptr > 6) ptr = 0;
+            if (NOTE_ORDER[ptr] === 'c') currentOctave++;
+        }
+    }
+    return `${noteName}/${currentOctave}`;
 };
 
 export const isNoteInRange = (noteKey: string, instrument: 'guitar' | 'bass'): boolean => {
@@ -113,7 +113,7 @@ export const getPitchFromVisual = (visualKey: string, keySignature: string): str
 };
 
 export const getAccidentalsForContext = (pitch: string, keySignature: string): string[] => {
-    const [notePart, ] = pitch.split('/');
+    const [notePart,] = pitch.split('/');
     const letter = notePart.charAt(0).toLowerCase();
     const pitchAcc = notePart.slice(1);
     const keyAcc = KEY_SIGNATURE_ACCIDENTALS[keySignature] || {};
@@ -131,7 +131,10 @@ export const calculateMeasureDuration = (measure: MeasureData): number => {
     measure.notes.forEach(n => {
         let val = DURATION_VALUES[n.duration];
         if (n.dotted) val *= 1.5;
-        if (n.tuplet) val *= (2/3);
+        // Triplet: 3 notes in the time of 2 notes of same duration
+        // Example: 3 triplet eighth notes (base=0.5) = 2 eighth notes = 1 beat
+        // So each triplet eighth = 1/3 beat = (0.5 * 2) / 3
+        if (n.tuplet) val = (val * 2) / 3;
         total += val;
     });
     return total;
@@ -152,6 +155,7 @@ export const canAddNote = (measure: MeasureData, duration: NoteDuration, isDotte
     const currentTotal = calculateMeasureDuration(measure);
     let noteVal = DURATION_VALUES[duration];
     if (isDotted) noteVal *= 1.5;
-    if (isTuplet) noteVal *= (2/3);
+    // Triplet: 3 notes in the time of 2 notes of same duration
+    if (isTuplet) noteVal = (noteVal * 2) / 3;
     return (currentTotal + noteVal) <= (MAX + 0.01);
 };

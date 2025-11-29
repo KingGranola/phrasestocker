@@ -5,9 +5,12 @@ import { KEYS } from './constants';
 import ScoreCanvas from './components/ScoreCanvas';
 import Toolbar from './components/Toolbar';
 import ChordPalette from './components/ChordPalette';
+import ChordEditor from './components/ChordEditor';
 import { Sidebar, Header } from './components/Layout';
-import { HelpModal, SavePhraseModal, ConfirmationModal, NotificationToast, SaveOptionsModal } from './components/modals';
+import { HelpModal, SavePhraseModal, ConfirmationModal, NotificationToast, SaveOptionsModal, AIGenerationModal } from './components/modals';
 import { useAudio, PlaybackConfig } from './hooks/useAudio';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useScoreInteractions } from './hooks/useScoreInteractions';
 import { canAddNote, validateMeasure, getPitchFromVisual, getAccidentalsForContext, shiftPitchVisual, shiftPitchChromatic } from './services/musicTheory';
 import { calculateTabPosition, getValidTabPositions } from './services/tabLogic';
 import { exportToMidi, exportToMusicXML } from './services/exporter';
@@ -74,10 +77,11 @@ const AppContent: React.FC = () => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isSaveOptionsModalOpen, setIsSaveOptionsModalOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isAIModeOpen, setIsAIModeOpen] = useState(false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'info' } | null>(null);
 
   const canvasColors = { primary: '#000000', secondary: '#ffffff', error: '#fee2e2' };
-  const { isPlaying, isLoaded, play, stop, previewNote } = useAudio(phrase, playbackConfig);
+  const { isPlaying, isLoaded, play, stop, previewNote, previewChord } = useAudio(phrase, playbackConfig);
   const activeAccidental = selectedNote?.accidentals.includes('#') ? 'sharp' : selectedNote?.accidentals.includes('b') ? 'flat' : selectedNote?.accidentals.includes('n') ? 'natural' : null;
 
   // Canvas幅の管理
@@ -220,197 +224,25 @@ const AppContent: React.FC = () => {
     });
   };
 
-  const handleNoteSelect = (id: string | null, source?: 'score' | 'tab', x?: number, y?: number) => {
-    if (inputMode === 'eraser' && id) {
-      deleteNote(id);
-      return;
-    }
+  // Custom Hooks
+  useKeyboardShortcuts({ isPlaying, play, stop, previewNote });
+  const { handleNoteSelect, handleCanvasClick, handleNoteDrag, handleChordDrop, handleChordClick } = useScoreInteractions({ previewNote });
 
-    if (inputMode === 'select' && source === 'tab' && id && id === selectedNoteId) {
-      const note = selectedNote;
-      if (note && !note.isRest) {
-        const valid = getValidTabPositions(note.keys[0], phrase.instrument);
-        if (valid.length <= 1) return;
+  const filteredLibrary = searchLibrary(searchQuery);
 
-        let currIdx = valid.findIndex(p => p.string === (note.string || 0) && p.fret === (note.fret || 0));
-        if (currIdx === -1) currIdx = 0;
-        const nextIdx = (currIdx + 1) % valid.length;
+  const [editingChord, setEditingChord] = useState<{ id: string, symbol: string, x: number, y: number } | null>(null);
 
-        updateSelectedNote({
-          string: valid[nextIdx].string,
-          fret: valid[nextIdx].fret,
-          isManualTab: true
-        });
-      }
-      return;
-    }
-
-    setSelectedNoteId(id);
-    if (source) setSelectionSource(source);
-    else if (id === null) setSelectionSource('score');
-  };
-
-  const handleChordClick = (chordId: string) => {
-    if (inputMode === 'eraser') deleteChord(chordId);
-  };
-
-  const handleCanvasClick = (measureIndex: number, visualPitch: string) => {
-    if (inputMode === 'entry') {
-      const targetMeasure = phrase.measures[measureIndex];
-      if (!canAddNote(targetMeasure, activeDuration, isDotted, isTriplet)) return;
-
-      let logicalPitch = isRest ? (phrase.instrument === 'bass' ? 'd/3' : 'b/4') : getPitchFromVisual(visualPitch, phrase.keySignature);
-      if (!isRest && !isNoteInRange(logicalPitch, phrase.instrument)) return;
-
-      const newNote: NoteData = {
-        id: uuidv4(),
-        keys: [logicalPitch],
-        duration: activeDuration,
-        isRest: isRest,
-        dotted: isDotted,
-        tuplet: isTriplet,
-        accidentals: isRest ? [] : getAccidentalsForContext(logicalPitch, phrase.keySignature)
-      };
-
-      if (!isRest) {
-        const tabPos = calculateTabPosition(logicalPitch, phrase.instrument, phrase.measures[measureIndex].notes.slice(-1)[0]);
-        newNote.string = tabPos.string;
-        newNote.fret = tabPos.fret;
-        previewNote(logicalPitch, phrase.instrument);
-      }
-
-      setPhrase({
-        ...phrase,
-        measures: phrase.measures.map((m, i) =>
-          i === measureIndex ? { ...m, notes: [...m.notes, newNote] } : m
-        )
-      });
-    }
-  };
-
-  const handleNoteDrag = (noteId: string, visualPitch: string) => {
-    const logicalPitch = getPitchFromVisual(visualPitch, phrase.keySignature);
-    if (!isNoteInRange(logicalPitch, phrase.instrument)) return;
-
+  const handleChordEditSave = (newSymbol: string) => {
+    if (!editingChord) return;
     setPhrase({
       ...phrase,
       measures: phrase.measures.map(m => ({
         ...m,
-        notes: m.notes.map(n =>
-          n.id === noteId && !n.isRest
-            ? {
-              ...n,
-              keys: [logicalPitch],
-              accidentals: getAccidentalsForContext(logicalPitch, phrase.keySignature),
-              ...calculateTabPosition(logicalPitch, phrase.instrument),
-              isManualTab: false
-            }
-            : n
-        )
+        chords: m.chords.map(c => c.id === editingChord.id ? { ...c, symbol: newSymbol } : c)
       }))
     });
+    setEditingChord(null);
   };
-
-  const handleChordDrop = (measureIndex: number, position: number, symbol: string) => {
-    const snappedBeat = position < 2 ? 0 : 2;
-    setPhrase({
-      ...phrase,
-      measures: phrase.measures.map((m, idx) =>
-        idx !== measureIndex
-          ? m
-          : {
-            ...m,
-            chords: [
-              ...m.chords.filter(c => Math.abs(c.position - snappedBeat) >= 0.1),
-              { id: uuidv4(), symbol, position: snappedBeat }
-            ].sort((a, b) => a.position - b.position)
-          }
-      )
-    });
-  };
-
-  // キーボードショートカット
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-      const key = e.key.toLowerCase();
-
-      if (key === 'n') {
-        setInputMode(inputMode === 'entry' ? 'select' : 'entry');
-        setSelectedNoteId(null);
-        return;
-      }
-      if (key === 'escape') {
-        setInputMode('select');
-        setSelectedNoteId(null);
-        return;
-      }
-      if (key === 's') setInputMode('select');
-      if (key === 'e') {
-        setInputMode(inputMode === 'eraser' ? 'select' : 'eraser');
-        setSelectedNoteId(null);
-        return;
-      }
-      if (key === ' ') {
-        e.preventDefault();
-        isPlaying ? stop() : play();
-      }
-      if (['1', '2', '4', '8'].includes(key)) {
-        const map: any = { '1': 'w', '2': 'h', '4': 'q', '8': '8' };
-        handleDurationChange(map[key]);
-      }
-      if (key === '.') handleDottedToggle();
-      if (key === '0') handleRestToggle();
-      if (key === '3') handleTripletToggle();
-      if (key === 'backspace' || key === 'delete') handleDeleteSelected();
-
-      if (selectedNoteId && (key === 'arrowup' || key === 'arrowdown')) {
-        e.preventDefault();
-        const dir = key === 'arrowup' ? 1 : -1;
-
-        const updatedPhrase = {
-          ...phrase,
-          measures: phrase.measures.map(m => ({
-            ...m,
-            notes: m.notes.map(n => {
-              if (n.id === selectedNoteId && !n.isRest) {
-                if (e.ctrlKey) {
-                  const valid = getValidTabPositions(n.keys[0], phrase.instrument);
-                  if (valid.length < 1) return n;
-                  let currIdx = valid.findIndex(p => p.string === (n.string || 0) && p.fret === (n.fret || 0));
-                  if (currIdx === -1) currIdx = 0;
-                  let nextIdx = key === 'arrowup' ? currIdx - 1 : currIdx + 1;
-                  if (nextIdx < 0) nextIdx = valid.length - 1;
-                  if (nextIdx >= valid.length) nextIdx = 0;
-                  return { ...n, string: valid[nextIdx].string, fret: valid[nextIdx].fret, isManualTab: true };
-                }
-                const isChromatic = e.shiftKey || selectionSource === 'tab';
-                const logicalKey = isChromatic
-                  ? shiftPitchChromatic(n.keys[0], dir, phrase.keySignature)
-                  : getPitchFromVisual(shiftPitchVisual(n.keys[0], dir), phrase.keySignature);
-                if (!isNoteInRange(logicalKey, phrase.instrument)) return n;
-                previewNote(logicalKey, phrase.instrument);
-                return {
-                  ...n,
-                  keys: [logicalKey],
-                  accidentals: getAccidentalsForContext(logicalKey, phrase.keySignature),
-                  ...calculateTabPosition(logicalKey, phrase.instrument),
-                  isManualTab: false
-                };
-              }
-              return n;
-            })
-          }))
-        };
-        setPhrase(updatedPhrase);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, play, stop, selectedNoteId, inputMode, isDotted, isRest, isTriplet, activeDuration, previewNote, selectionSource]);
-
-  const filteredLibrary = searchLibrary(searchQuery);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[var(--bg-body)]">
@@ -471,6 +303,7 @@ const AppContent: React.FC = () => {
             onExportMidi={() => exportToMidi(phrase)}
             onExportXml={() => exportToMusicXML(phrase, { includeDegrees: showDegrees })}
             onImport={handleImport}
+            onGenerate={() => setIsAIModeOpen(true)}
           />
         </div>
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -490,7 +323,12 @@ const AppContent: React.FC = () => {
                 onCanvasClick={handleCanvasClick}
                 onNoteDrag={handleNoteDrag}
                 onChordDrop={handleChordDrop}
-                onChordClick={handleChordClick}
+                onChordClick={(id, x, y) => handleChordClick(id, (chordId) => {
+                  const chord = phrase.measures.flatMap(m => m.chords).find(c => c.id === chordId);
+                  if (chord) {
+                    setEditingChord({ id: chordId, symbol: chord.symbol, x, y });
+                  }
+                })}
                 onPreviewNote={(p) => previewNote(p, phrase.instrument)}
                 showDegrees={showDegrees}
                 primaryColor={canvasColors.primary}
@@ -527,6 +365,15 @@ const AppContent: React.FC = () => {
           })}
         </div>
       </div>
+      {editingChord && (
+        <ChordEditor
+          initialSymbol={editingChord.symbol}
+          onSave={handleChordEditSave}
+          onCancel={() => setEditingChord(null)}
+          onPreview={previewChord}
+          position={{ x: editingChord.x, y: editingChord.y }}
+        />
+      )}
       {confirmModal && (
         <ConfirmationModal
           isOpen={confirmModal.isOpen}
@@ -552,6 +399,7 @@ const AppContent: React.FC = () => {
         onCancel={() => setIsSaveModalOpen(false)}
       />
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <AIGenerationModal isOpen={isAIModeOpen} onClose={() => setIsAIModeOpen(false)} />
     </div>
   );
 };

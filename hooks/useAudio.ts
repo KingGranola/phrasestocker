@@ -27,7 +27,7 @@ export interface PlaybackConfig { melodyVolume: number; chordVolume: number; mel
 
 export const useAudio = (phrase: Phrase, config: PlaybackConfig) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false); 
+  const [isLoaded, setIsLoaded] = useState(false);
   const melodySynthRef = useRef<Tone.Instrument<any> | null>(null);
   const chordSynthRef = useRef<Tone.Instrument<any> | null>(null);
   const metronomeSynthsRef = useRef<{ membrane: Tone.MembraneSynth | null; beep: Tone.Synth | null }>({ membrane: null, beep: null });
@@ -48,18 +48,18 @@ export const useAudio = (phrase: Phrase, config: PlaybackConfig) => {
     let active = true; let melodyLoaded = false; let chordsLoaded = false;
     const checkLoaded = () => { if (!active) return; if (melodyLoaded && chordsLoaded) { setIsLoaded(true); } };
     const createInstrument = (presetList: any[], id: string, gainNode: Tone.Gain, onLoad: () => void): Tone.Instrument<any> => {
-        const preset = presetList.find(p => p.id === id) || presetList[0];
-        let instrument: Tone.Instrument<any>;
-        if (preset.type === 'sampler') { instrument = new Tone.Sampler({ urls: PIANO_SAMPLE_MAP, baseUrl: PIANO_SAMPLES_URL, onload: () => { onLoad(); } }); } 
-        else if (preset.type === 'fmsynth') { instrument = new Tone.PolySynth(Tone.FMSynth, preset.options); onLoad(); } 
-        else if (preset.type === 'monosynth') { instrument = new Tone.PolySynth(Tone.MonoSynth, preset.options); onLoad(); } 
-        else { instrument = new Tone.PolySynth(Tone.Synth, preset.options); onLoad(); }
-        instrument.connect(gainNode); return instrument;
+      const preset = presetList.find(p => p.id === id) || presetList[0];
+      let instrument: Tone.Instrument<any>;
+      if (preset.type === 'sampler') { instrument = new Tone.Sampler({ urls: PIANO_SAMPLE_MAP, baseUrl: PIANO_SAMPLES_URL, onload: () => { onLoad(); } }); }
+      else if (preset.type === 'fmsynth') { instrument = new Tone.PolySynth(Tone.FMSynth, preset.options); onLoad(); }
+      else if (preset.type === 'monosynth') { instrument = new Tone.PolySynth(Tone.MonoSynth, preset.options); onLoad(); }
+      else { instrument = new Tone.PolySynth(Tone.Synth, preset.options); onLoad(); }
+      instrument.connect(gainNode); return instrument;
     };
-    melodySynthRef.current?.dispose(); chordSynthRef.current?.dispose(); setIsLoaded(false); 
+    melodySynthRef.current?.dispose(); chordSynthRef.current?.dispose(); setIsLoaded(false);
     if (melodyGainRef.current && chordGainRef.current) {
-        melodySynthRef.current = createInstrument(INSTRUMENT_PRESETS.melody, config.melodyInstrument, melodyGainRef.current, () => { melodyLoaded = true; checkLoaded(); });
-        chordSynthRef.current = createInstrument(INSTRUMENT_PRESETS.chords, config.chordInstrument, chordGainRef.current, () => { chordsLoaded = true; checkLoaded(); });
+      melodySynthRef.current = createInstrument(INSTRUMENT_PRESETS.melody, config.melodyInstrument, melodyGainRef.current, () => { melodyLoaded = true; checkLoaded(); });
+      chordSynthRef.current = createInstrument(INSTRUMENT_PRESETS.chords, config.chordInstrument, chordGainRef.current, () => { chordsLoaded = true; checkLoaded(); });
     }
     return () => { active = false; };
   }, [config.melodyInstrument, config.chordInstrument]);
@@ -72,9 +72,9 @@ export const useAudio = (phrase: Phrase, config: PlaybackConfig) => {
   }, [config.melodyVolume, config.chordVolume, config.isMetronomeOn, config.metronomeVolume, phrase.bpm]);
 
   const stop = () => {
-    Tone.Transport.stop(); Tone.Transport.cancel(); 
-    if (melodySynthRef.current && !melodySynthRef.current.disposed) { try { if (melodySynthRef.current instanceof Tone.PolySynth || melodySynthRef.current instanceof Tone.Sampler) { melodySynthRef.current.releaseAll(); } } catch(e) { console.error(e); } }
-    if (chordSynthRef.current && !chordSynthRef.current.disposed) { try { if (chordSynthRef.current instanceof Tone.PolySynth || chordSynthRef.current instanceof Tone.Sampler) { chordSynthRef.current.releaseAll(); } } catch(e) { console.error(e); } }
+    Tone.Transport.stop(); Tone.Transport.cancel();
+    if (melodySynthRef.current && !melodySynthRef.current.disposed) { try { if (melodySynthRef.current instanceof Tone.PolySynth || melodySynthRef.current instanceof Tone.Sampler) { melodySynthRef.current.releaseAll(); } } catch (e) { console.error(e); } }
+    if (chordSynthRef.current && !chordSynthRef.current.disposed) { try { if (chordSynthRef.current instanceof Tone.PolySynth || chordSynthRef.current instanceof Tone.Sampler) { chordSynthRef.current.releaseAll(); } } catch (e) { console.error(e); } }
     setIsPlaying(false);
   };
 
@@ -86,61 +86,71 @@ export const useAudio = (phrase: Phrase, config: PlaybackConfig) => {
     let cumulativeBeats = 0;
     let lastChordMidi: number[] = [];
     phrase.measures.forEach(measure => {
-        let noteCursor = cumulativeBeats;
-        if (config.isMetronomeOn) {
-            for (let i = 0; i < 4; i++) {
-                const beatTime = cumulativeBeats + i;
-                const shouldPlay = config.metronomePattern === 'all' ? true : (i === 1 || i === 3);
-                if (shouldPlay) {
-                    Tone.Transport.schedule((time) => {
-                         const synths = metronomeSynthsRef.current; const sound = config.metronomeSound;
-                         if (sound === 'kick' && synths.membrane && !synths.membrane.disposed) { try { synths.membrane.triggerAttackRelease("C2", "32n", time); } catch(e) {} } else if (sound === 'click' && synths.membrane && !synths.membrane.disposed) { try { synths.membrane.triggerAttackRelease("G5", "32n", time); } catch(e) {} } else if (sound === 'beep' && synths.beep && !synths.beep.disposed) { try { synths.beep.triggerAttackRelease("C5", "32n", time); } catch(e) {} }
-                    }, `0:0:${beatTime * 4}`);
-                }
-            }
+      let noteCursor = cumulativeBeats;
+      if (config.isMetronomeOn) {
+        for (let i = 0; i < 4; i++) {
+          const beatTime = cumulativeBeats + i;
+          const shouldPlay = config.metronomePattern === 'all' ? true : (i === 1 || i === 3);
+          if (shouldPlay) {
+            Tone.Transport.schedule((time) => {
+              const synths = metronomeSynthsRef.current; const sound = config.metronomeSound;
+              if (sound === 'kick' && synths.membrane && !synths.membrane.disposed) { try { synths.membrane.triggerAttackRelease("C2", "32n", time); } catch (e) { } } else if (sound === 'click' && synths.membrane && !synths.membrane.disposed) { try { synths.membrane.triggerAttackRelease("G5", "32n", time); } catch (e) { } } else if (sound === 'beep' && synths.beep && !synths.beep.disposed) { try { synths.beep.triggerAttackRelease("C5", "32n", time); } catch (e) { } }
+            }, `0:0:${beatTime * 4}`);
+          }
         }
-        measure.notes.forEach(note => {
-            const noteValue = DURATION_VALUES[note.duration];
-            const durationBeats = note.dotted ? noteValue * 1.5 : noteValue;
-            if (!note.isRest && melodySynthRef.current) {
-                const midi = keyToMidi(note.keys[0]);
-                const realMidi = phrase.instrument === 'guitar' ? midi - 12 : midi;
-                const freq = Tone.Frequency(realMidi, "midi").toNote();
-                Tone.Transport.schedule((time) => {
-                    const noteDur = Tone.Time("4n").toSeconds() * durationBeats;
-                    if (melodySynthRef.current && !melodySynthRef.current.disposed) { if (melodySynthRef.current instanceof Tone.Sampler && !melodySynthRef.current.loaded) return; try { melodySynthRef.current.triggerAttackRelease(freq, noteDur, time); } catch(e) {} }
-                }, `0:0:${noteCursor * 4}`);
-            }
-            let actualDuration = durationBeats; if (note.tuplet) actualDuration = durationBeats * (2/3);
-            noteCursor += actualDuration;
-        });
-        const sortedChords = [...measure.chords].sort((a, b) => a.position - b.position);
-        sortedChords.forEach(chord => {
-             const startBeat = cumulativeBeats + chord.position;
-             let nextChordPos = 4; const nextChord = sortedChords.find(c => c.position > chord.position); if (nextChord) nextChordPos = nextChord.position;
-             const chordDurationBeats = nextChordPos - chord.position;
-             const noteNames = getChordNotes(chord.symbol, 3, config.voicing, lastChordMidi);
-             const currentChordMidi = noteNames.map(n => keyToMidi(n.replace(/(\D)(\d)/, "$1/$2")));
-             lastChordMidi = currentChordMidi;
-             Tone.Transport.schedule((time) => {
-                 const chordDur = Tone.Time("4n").toSeconds() * chordDurationBeats;
-                 if (chordSynthRef.current && !chordSynthRef.current.disposed) { if (chordSynthRef.current instanceof Tone.Sampler && !chordSynthRef.current.loaded) return; try { chordSynthRef.current.triggerAttackRelease(noteNames, chordDur, time); } catch(e) {} }
-             }, `0:0:${startBeat * 4}`);
-        });
-        cumulativeBeats += 4;
+      }
+      measure.notes.forEach(note => {
+        const noteValue = DURATION_VALUES[note.duration];
+        const durationBeats = note.dotted ? noteValue * 1.5 : noteValue;
+        if (!note.isRest && melodySynthRef.current) {
+          const midi = keyToMidi(note.keys[0]);
+          const realMidi = phrase.instrument === 'guitar' ? midi - 12 : midi;
+          const freq = Tone.Frequency(realMidi, "midi").toNote();
+          Tone.Transport.schedule((time) => {
+            const noteDur = Tone.Time("4n").toSeconds() * durationBeats;
+            if (melodySynthRef.current && !melodySynthRef.current.disposed) { if (melodySynthRef.current instanceof Tone.Sampler && !melodySynthRef.current.loaded) return; try { melodySynthRef.current.triggerAttackRelease(freq, noteDur, time); } catch (e) { } }
+          }, `0:0:${noteCursor * 4}`);
+        }
+        let actualDuration = durationBeats; if (note.tuplet) actualDuration = durationBeats * (2 / 3);
+        noteCursor += actualDuration;
+      });
+      const sortedChords = [...measure.chords].sort((a, b) => a.position - b.position);
+      sortedChords.forEach(chord => {
+        const startBeat = cumulativeBeats + chord.position;
+        let nextChordPos = 4; const nextChord = sortedChords.find(c => c.position > chord.position); if (nextChord) nextChordPos = nextChord.position;
+        const chordDurationBeats = nextChordPos - chord.position;
+        const noteNames = getChordNotes(chord.symbol, 3, config.voicing, lastChordMidi);
+        const currentChordMidi = noteNames.map(n => keyToMidi(n.replace(/(\D)(\d)/, "$1/$2")));
+        lastChordMidi = currentChordMidi;
+        Tone.Transport.schedule((time) => {
+          const chordDur = Tone.Time("4n").toSeconds() * chordDurationBeats;
+          if (chordSynthRef.current && !chordSynthRef.current.disposed) { if (chordSynthRef.current instanceof Tone.Sampler && !chordSynthRef.current.loaded) return; try { chordSynthRef.current.triggerAttackRelease(noteNames, chordDur, time); } catch (e) { } }
+        }, `0:0:${startBeat * 4}`);
+      });
+      cumulativeBeats += 4;
     });
     const totalDurationBeats = phrase.measures.length * 4;
     Tone.Transport.schedule(() => { setIsPlaying(false); Tone.Transport.stop(); }, `0:0:${totalDurationBeats * 4}`);
     Tone.Transport.start(); setIsPlaying(true);
   };
   const previewNote = (pitch: string, instrument: 'guitar' | 'bass') => {
-      if (!melodySynthRef.current || !isLoaded || melodySynthRef.current.disposed) return;
-      if (melodySynthRef.current instanceof Tone.Sampler && !melodySynthRef.current.loaded) return;
-      if (Tone.context.state !== 'running') { Tone.start().catch(() => {}); }
-      const midi = keyToMidi(pitch);
-      const realMidi = instrument === 'guitar' ? midi - 12 : midi;
-      const freq = Tone.Frequency(realMidi, "midi").toNote();
-      try { melodySynthRef.current.triggerAttackRelease(freq, "8n"); } catch(e) {}
+    if (!melodySynthRef.current || !isLoaded || melodySynthRef.current.disposed) return;
+    if (melodySynthRef.current instanceof Tone.Sampler && !melodySynthRef.current.loaded) return;
+    if (Tone.context.state !== 'running') { Tone.start().catch(() => { }); }
+    const midi = keyToMidi(pitch);
+    const realMidi = instrument === 'guitar' ? midi - 12 : midi;
+    const freq = Tone.Frequency(realMidi, "midi").toNote();
+    try { melodySynthRef.current.triggerAttackRelease(freq, "8n"); } catch (e) { }
   };
-  return { isPlaying, isLoaded, play, stop, previewNote };
+
+  const previewChord = (symbol: string) => {
+    if (!chordSynthRef.current || !isLoaded || chordSynthRef.current.disposed) return;
+    if (chordSynthRef.current instanceof Tone.Sampler && !chordSynthRef.current.loaded) return;
+    if (Tone.context.state !== 'running') { Tone.start().catch(() => { }); }
+
+    const noteNames = getChordNotes(symbol, 3, config.voicing);
+    try { chordSynthRef.current.triggerAttackRelease(noteNames, "2n"); } catch (e) { }
+  };
+
+  return { isPlaying, isLoaded, play, stop, previewNote, previewChord };
 };

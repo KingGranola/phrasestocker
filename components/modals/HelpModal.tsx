@@ -12,7 +12,7 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="w-full max-w-5xl h-[85vh] app-panel overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)] bg-[var(--bg-body)] shrink-0">
-                    <div className="flex items-center gap-2"><BookOpen size={20} className="text-[var(--accent)]" /><span className="font-bold text-lg">PhraseStocker 取扱説明書</span><span className="text-xs text-[var(--text-muted)] bg-[var(--bg-sub)] px-2 py-0.5 rounded ml-2">v0.8</span></div>
+                    <div className="flex items-center gap-2"><BookOpen size={20} className="text-[var(--accent)]" /><span className="font-bold text-lg">PhraseStocker 取扱説明書</span><span className="text-xs text-[var(--text-muted)] bg-[var(--bg-sub)] px-2 py-0.5 rounded ml-2">v1.0</span></div>
                     <button onClick={onClose} className="hover:text-[var(--text-main)] text-[var(--text-muted)] transition-colors"><X size={20} /></button>
                 </div>
                 <div className="flex border-b border-[var(--border-color)] bg-[var(--bg-panel)] px-6 shrink-0 overflow-x-auto">
@@ -39,10 +39,11 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({
                             <div className="mt-8 border-t border-[var(--border-color)] pt-6">
                                 <h3 className="font-bold text-[var(--text-main)] mb-3 flex items-center gap-2"><FileMusic size={16} /> 更新履歴</h3>
                                 <ul className="space-y-2 text-sm text-[var(--text-muted)]">
+                                    <li className="flex items-center"><span className="font-mono text-[var(--accent)] font-bold mr-3">v1.0</span><span>AI Phrase Generator (beta)追加、UI完全ダークモード化、ツールバー機能グループ再編成</span></li>
+                                    <li className="flex items-center"><span className="font-mono text-[var(--accent)] font-bold mr-3">v0.9</span><span>コード編集機能強化、Chord Preview、ミキサーパネル拡張、Add9コード対応</span></li>
                                     <li className="flex items-center"><span className="font-mono text-[var(--accent)] font-bold mr-3">v0.8</span><span>マニュアル拡充、UI操作感の向上、ポインター表示の改善</span></li>
                                     <li className="flex items-center"><span className="font-mono text-[var(--accent)] font-bold mr-3">v0.7</span><span>リファクタリング、UIコンポーネント整理</span></li>
                                     <li className="flex items-center"><span className="font-mono text-[var(--accent)] font-bold mr-3">v0.6</span><span>小節数制限(1-2)、マニュアル拡充、全消去ボタン</span></li>
-                                    <li className="flex items-center"><span className="font-mono text-[var(--accent)] font-bold mr-3">v0.5</span><span>モバイル(横画面)対応、メトロノーム機能強化</span></li>
                                 </ul>
                             </div>
                         </div>
@@ -68,7 +69,10 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({
                                             <span className="text-[var(--accent)]">※ 小節の拍数を超える配置はできません（赤色で警告）。</span></p>
 
                                         <p className="mb-2"><strong className="text-[var(--text-main)]">休符の入力</strong></p>
-                                        <p><kbd>0</kbd> キーを押すと休符モードになります。その状態で譜面をクリックすると、選択中の長さの休符が配置されます。</p>
+                                        <p className="mb-3"><kbd>0</kbd> キーを押すと休符モードになります。その状態で譜面をクリックすると、選択中の長さの休符が配置されます。</p>
+
+                                        <p className="mb-2"><strong className="text-[var(--text-main)]">Eraserモード</strong></p>
+                                        <p>ツールバーの消しゴムアイコンをクリックすると、カーソルが消しゴムに変わり、クリックで音符を削除できます。</p>
                                     </div>
                                 </div>
                             </section>
@@ -115,9 +119,101 @@ export const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({
                                 </div>
                             </section>
 
+                            {/* AI Phrase Generator */}
+                            <section className="space-y-4">
+                                <h3 className="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border-color)] pb-2 flex items-center gap-2"><Zap size={18} className="text-purple-500" /> 4. AI Phrase Generator (beta)</h3>
+                                <div className="text-sm text-[var(--text-muted)] space-y-3">
+                                    <p className="bg-purple-500/10 border-l-4 border-purple-500 pl-3 py-2">ツールバー右端の紫色の杖アイコンから、AIによる自動フレーズ生成機能を利用できます。<span className="text-[var(--text-main)] font-bold ml-2">(ベータ版)</span></p>
+                                    <div className="bg-[var(--bg-body)] p-4 rounded-lg border border-[var(--border-color)]">
+                                        <h4 class Name="font-bold text-[var(--text-main)] mb-2">使い方</h4>
+                                        <ol className="list-decimal pl-5 space-y-2">
+                                            <li><strong>Note Density:</strong> Low/Medium/Highから音符の密度を選択</li>
+                                            <li><strong>Style:</strong> スライダーでBebop（伝統的）→ Modern → Contemporary（現代的）を調整</li>
+                                            <li><strong>Target:</strong> 全小節に適用</li>
+                                            <li><strong>Generate Phrase:</strong> ボタンを押して生成</li>
+                                        </ol>
+                                        <p className="mt-3 text-xs italic text-[var(--text-muted)]">※ ベータ版のため、生成されるフレーズは必ずしも完璧ではありません。生成後に手動で調整してください。</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Mixer & Metronome */}
+                            <section className="space-y-4">
+                                <h3 className="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border-color)] pb-2 flex items-center gap-2"><Music size={18} /> 5. Mixer & Metronome</h3>
+                                <div className="text-sm text-[var(--text-muted)] space-y-3">
+                                    <p>再生コントロール横のスライダーアイコンをクリックすると、詳細な音声設定パネルが開きます。</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-[var(--bg-body)] p-4 rounded-lg border border-[var(--border-color)]">
+                                            <h4 className="font-bold text-[var(--text-main)] mb-2">Volume Control</h4>
+                                            <ul className="space-y-1 text-xs">
+                                                <li>• <strong>Melody Vol:</strong> メロディの音量</li>
+                                                <li>• <strong>Chords Vol:</strong> 伴奏の音量</li>
+                                                <li>• <strong>Metronome Vol:</strong> メトロノームの音量</li>
+                                            </ul>
+                                        </div>
+                                        <div className="bg-[var(--bg-body)] p-4 rounded-lg border border-[var(--border-color)]">
+                                            <h4 className="font-bold text-[var(--text-main)] mb-2">Metronome Settings</h4>
+                                            <ul className="space-y-1 text-xs">
+                                                <li>• <strong>Sound:</strong> Click/Kick/Beep</li>
+                                                <li>• <strong>Pattern:</strong> All Beats (1-2-3-4) または Jazz (2 & 4)</li>
+                                                <li>• ON/OFFスイッチで切り替え</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div className="bg-[var(--bg-sub)] p-4 rounded-lg border border-[var(--border-color)]">
+                                        <h4 className="font-bold text-[var(--accent)] mb-2">Piano Voicing</h4>
+                                        <ul className="space-y-2 text-xs">
+                                            <li><strong>Standard:</strong> Root + 3 + 5 + 9 の基本形</li>
+                                            <li><strong>Closed:</strong> シンプルな密集配置</li>
+                                            <li><strong>Shell:</strong> ジャズピアノ左手風（Root + 3 + 7）</li>
+                                            <li><strong>Drop 2:</strong> ギター向け転回形</li>
+                                            <li><strong>Rootless:</strong> Bill Evans風ルートレスボイシング</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Import/Export */}
+                            <section className="space-y-4">
+                                <h3 className="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border-color)] pb-2 flex items-center gap-2"><Download size={18} /> 6. Import/Export</h3>
+                                <div className="text-sm text-[var(--text-muted)] space-y-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="bg-[var(--bg-body)] p-4 rounded-lg border border-[var(--border-color)]">
+                                            <h4 className="font-bold text-[var(--text-main)] mb-2">Import JSON</h4>
+                                            <p className="text-xs">保存したライブラリファイル（JSON）を読み込んで復元します。複数デバイス間でのデータ同期に便利です。</p>
+                                        </div>
+                                        <div className="bg-[var(--bg-body)] p-4 rounded-lg border border-[var(--border-color)]">
+                                            <h4 className="font-bold text-[var(--text-main)] mb-2">Export MIDI</h4>
+                                            <p className="text-xs">DAW（Logic Pro, Ableton等）で使用できるMIDIファイルとしてエクスポートします。</p>
+                                        </div>
+                                        <div className="bg-[var(--bg-body)] p-4 rounded-lg border border-[var(--border-color)]">
+                                            <h4 className="font-bold text-[var(--text-main)] mb-2">Export MusicXML</h4>
+                                            <p className="text-xs">MuseScore、Finale等の楽譜ソフトで開けるMusicXML形式でエクスポートします。</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Chord Editing */}
+                            <section className="space-y-4">
+                                <h3 className="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border-color)] pb-2 flex items-center gap-2"><Edit2 size={18} /> 7. Chord Editing</h3>
+                                <div className="text-sm text-[var(--text-muted)] space-y-3">
+                                    <p>譜面上のコードシンボルをクリックすると、コード編集パネルが開きます。</p>
+                                    <div className="bg-[var(--bg-body)] p-4 rounded-lg border border-[var(--border-color)]">
+                                        <ul className="space-y-2">
+                                            <li><strong>Root:</strong> コードのルート音（C, D, Eb等）</li>
+                                            <li><strong>Quality:</strong> コードの性質（Maj, m, 7, m7, maj7, dim等）</li>
+                                            <li><strong>Tensions:</strong> テンション（b9, 9, #9, 11, #11, b13, 13）を複数選択可能</li>
+                                            <li><strong>Bass:</strong> 分数コードのベース音（/G等）</li>
+                                            <li><strong>Preview:</strong> スピーカーアイコンで編集中のコードを試聴</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </section>
+
                             {/* Troubleshooting */}
                             <section className="space-y-4">
-                                <h3 className="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border-color)] pb-2 flex items-center gap-2"><Wrench size={18} /> 4. トラブルシューティング & データ管理</h3>
+                                <h3 className="text-lg font-bold text-[var(--text-main)] border-b border-[var(--border-color)] pb-2 flex items-center gap-2"><Wrench size={18} /> 8. トラブルシューティング & データ管理</h3>
                                 <div className="space-y-4 text-sm text-[var(--text-muted)]">
                                     <div>
                                         <h4 className="font-bold text-[var(--text-main)] mb-1">Q. 音が出ない</h4>

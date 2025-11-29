@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { NoteDuration, InputMode } from '../types';
-import { Music, MousePointer2, Undo, Redo, Save, Trash2, Play, Square, Sliders, Eraser, FileAudio, FileCode, Loader2, Upload } from 'lucide-react';
+import { Music, MousePointer2, Undo, Redo, Save, Trash2, Play, Square, Sliders, Eraser, FileAudio, FileCode, Loader2, Upload, Wand2 } from 'lucide-react';
 import clsx from 'clsx';
 import { PlaybackConfig } from '../hooks/useAudio';
 import { MixerPanel } from './MixerPanel';
@@ -20,7 +20,8 @@ interface ToolbarProps {
   playbackConfig: PlaybackConfig; setPlaybackConfig: (config: PlaybackConfig) => void;
   onAccidental: (type: 'sharp' | 'flat' | 'natural') => void; activeAccidental?: 'sharp' | 'flat' | 'natural' | null;
   onExportMidi: () => void; onExportXml: () => void;
-  onImport: () => void; // 追加
+  onImport: () => void;
+  onGenerate: () => void; // Added
 }
 
 const ToolBtn: React.FC<{ isActive?: boolean; onClick: () => void; title: string; children: React.ReactNode; className?: string; disabled?: boolean }> = ({ isActive, onClick, title, children, className, disabled }) => (
@@ -37,28 +38,35 @@ const Toolbar: React.FC<ToolbarProps> = (props) => {
   return (
     <div className="flex items-center justify-between w-full h-12 px-2 select-none">
       <div className="flex items-center gap-1 overflow-x-auto overflow-y-hidden scrollbar-none flex-1 pr-4">
+        {/* Input Tools */}
         <div className="flex items-center gap-1">
-          <ToolBtn isActive={props.inputMode === 'entry'} onClick={() => props.setInputMode('entry')} title="Note Input (N)"><Music size={18} /></ToolBtn>
-          <ToolBtn isActive={props.inputMode === 'select'} onClick={() => props.setInputMode('select')} title="Select (Esc)"><MousePointer2 size={18} /></ToolBtn>
-          <ToolBtn isActive={props.inputMode === 'eraser'} onClick={() => props.setInputMode('eraser')} title="Eraser Tool"><Eraser size={18} /></ToolBtn>
+          <ToolBtn isActive={props.inputMode === 'entry'} onClick={() => props.setInputMode('entry')} title="Note Input (N)"><Music size={16} /></ToolBtn>
+          <ToolBtn isActive={props.inputMode === 'select'} onClick={() => props.setInputMode('select')} title="Select (Esc)"><MousePointer2 size={16} /></ToolBtn>
+          <ToolBtn isActive={props.inputMode === 'eraser'} onClick={() => props.setInputMode('eraser')} title="Eraser Tool"><Eraser size={16} /></ToolBtn>
         </div>
         <Separator />
+        {/* Note Duration */}
         <div className="flex items-center gap-1">{(['w', 'h', 'q', '8', '16'] as NoteDuration[]).map((d) => (<ToolBtn key={d} isActive={props.activeDuration === d} onClick={() => props.setDuration(d)} title={d}><DurationIcon duration={d} /></ToolBtn>))}</div>
         <Separator />
+        {/* Note Properties */}
         <div className="flex items-center gap-1">
           <ToolBtn isActive={props.isDotted} onClick={props.toggleDotted} title="Dotted (.)"><div className="w-1 h-1 rounded-full bg-current mb-1"></div><span className="text-[10px] font-bold absolute bottom-1 right-1">.</span></ToolBtn>
           <ToolBtn isActive={props.isTriplet} onClick={props.toggleTriplet} title="Triplet (3)"><span className="text-xs font-bold font-mono">3</span></ToolBtn>
           <ToolBtn isActive={props.isRest} onClick={props.toggleRest} title="Rest (0)"><span className="text-sm font-bold font-serif">𝄽</span></ToolBtn>
         </div>
         <Separator />
+        {/* Accidentals */}
         <div className="flex items-center gap-1">
           <ToolBtn isActive={props.activeAccidental === 'flat'} onClick={() => props.onAccidental('flat')} title="Flat"><span className="font-serif italic text-lg">♭</span></ToolBtn>
           <ToolBtn isActive={props.activeAccidental === 'natural'} onClick={() => props.onAccidental('natural')} title="Natural"><span className="font-serif text-lg">♮</span></ToolBtn>
           <ToolBtn isActive={props.activeAccidental === 'sharp'} onClick={() => props.onAccidental('sharp')} title="Sharp"><span className="font-serif italic text-lg">♯</span></ToolBtn>
         </div>
-        <div className="flex items-center gap-1 ml-2"><button onClick={props.onUndo} className="app-btn w-8 h-8 p-0 active:scale-95" title="Undo"><Undo size={14} /></button><button onClick={props.onRedo} className="app-btn w-8 h-8 p-0 active:scale-95" title="Redo"><Redo size={14} /></button></div>
+        <Separator />
+        {/* Edit Actions */}
+        <div className="flex items-center gap-1"><button onClick={props.onUndo} className="app-btn w-8 h-8 p-0 active:scale-95" title="Undo"><Undo size={14} /></button><button onClick={props.onRedo} className="app-btn w-8 h-8 p-0 active:scale-95" title="Redo"><Redo size={14} /></button></div>
       </div>
       <div className="flex items-center gap-3 shrink-0 relative">
+        {/* Playback */}
         <div className="flex items-center bg-[var(--bg-body)] rounded-md border border-[var(--border-color)] overflow-hidden">
           <button onClick={props.onPlayToggle} disabled={!props.isLoaded} className={clsx("px-4 py-1.5 flex items-center gap-2 text-xs font-bold transition-colors active:bg-[var(--bg-sub)]", !props.isLoaded ? "text-[var(--text-muted)] cursor-not-allowed opacity-50" : props.isPlaying ? "text-[var(--accent)] hover:bg-[var(--bg-hover)]" : "text-[var(--text-main)] hover:bg-[var(--bg-hover)]")}>
             {!props.isLoaded ? (<><Loader2 size={12} className="animate-spin" /> LOADING...</>) : (<>{props.isPlaying ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}{props.isPlaying ? 'STOP' : 'PLAY'}</>)}
@@ -69,12 +77,22 @@ const Toolbar: React.FC<ToolbarProps> = (props) => {
           <button onClick={() => setShowMixer(!showMixer)} className={clsx("p-2 hover:text-[var(--text-main)] active:bg-[var(--bg-sub)]", showMixer ? "text-[var(--accent)]" : "text-[var(--text-muted)]")}><Sliders size={14} /></button>
         </div>
         {showMixer && <MixerPanel config={props.playbackConfig} onChange={props.setPlaybackConfig} onClose={() => setShowMixer(false)} />}
+        {/* File Operations */}
         <div className="flex items-center gap-1 border-l border-[var(--border-color)] pl-3">
-          <button onClick={props.onClear} className="app-btn w-8 h-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-500/10 active:scale-95" title="Clear Score"><Trash2 size={16} /></button>
+          <button onClick={props.onSave} className="app-btn app-btn-primary px-4 py-1.5 gap-2 text-xs active:scale-95"><Save size={14} /> <span>SAVE</span></button>
           <button onClick={props.onImport} className="app-btn w-8 h-8 p-0 active:scale-95" title="Import JSON Files"><Upload size={16} /></button>
+        </div>
+        <Separator />
+        {/* Export */}
+        <div className="flex items-center gap-1">
           <button onClick={props.onExportMidi} className="app-btn w-8 h-8 p-0 active:scale-95" title="Export MIDI"><FileAudio size={16} /></button>
           <button onClick={props.onExportXml} className="app-btn w-8 h-8 p-0 active:scale-95" title="Export MusicXML"><FileCode size={16} /></button>
-          <button onClick={props.onSave} className="app-btn app-btn-primary px-4 py-1.5 gap-2 text-xs ml-1 active:scale-95"><Save size={14} /> <span>SAVE</span></button>
+        </div>
+        <Separator />
+        {/* AI & Destructive */}
+        <div className="flex items-center gap-1">
+          <button onClick={props.onGenerate} className="app-btn w-8 h-8 p-0 text-purple-500 hover:text-purple-600 hover:bg-purple-500/10 active:scale-95" title="AI Generate (beta)"><Wand2 size={16} /></button>
+          <button onClick={props.onClear} className="app-btn w-8 h-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-500/10 active:scale-95" title="Clear Score"><Trash2 size={16} /></button>
         </div>
       </div>
     </div>
