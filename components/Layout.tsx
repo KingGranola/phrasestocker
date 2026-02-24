@@ -60,7 +60,7 @@ export const Header: React.FC<{ sidebarOpen: boolean; setSidebarOpen: (v:boolean
              <div className="flex items-center gap-2 px-2 lg:px-3 py-1.5 bg-[var(--bg-body)] rounded-md border border-[var(--border-color)] hidden sm:flex">
                 <Grid size={14} className="text-[var(--text-muted)]" />
                 <select value={phrase.measures.length} onChange={(e) => updateMeasureCount(parseInt(e.target.value))} className="bg-transparent text-xs font-bold outline-none cursor-pointer text-[var(--text-main)]">
-                    {[1, 2].map(c => <option key={c} value={c}>{c} Bars</option>)}
+                    {[1, 2, 3, 4].map(c => <option key={c} value={c}>{c} Bars</option>)}
                 </select>
             </div>
             <div className="flex bg-[var(--bg-body)] p-1 rounded-md border border-[var(--border-color)]">
