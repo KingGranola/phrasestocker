@@ -11,14 +11,13 @@ import { HelpModal, SavePhraseModal, ConfirmationModal, NotificationToast, SaveO
 import { useAudio, PlaybackConfig } from './hooks/useAudio';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useScoreInteractions } from './hooks/useScoreInteractions';
-import { canAddNote, validateMeasure, getPitchFromVisual, getAccidentalsForContext, shiftPitchVisual, shiftPitchChromatic } from './services/musicTheory';
-import { calculateTabPosition, getValidTabPositions } from './services/tabLogic';
+import { validateMeasure } from './services/musicTheory';
+import { calculateTabPosition } from './services/tabLogic';
 import { exportToMidi, exportToMusicXML } from './services/exporter';
-import { isNoteInRange } from './services/musicTheory';
 import { RotateCcw, AlertCircle } from 'lucide-react';
 import { EditorProvider, useEditor } from './contexts/EditorContext';
 import { LibraryProvider, useLibrary } from './contexts/LibraryContext';
-import { NoteData } from './types';
+import { Phrase } from './types';
 import { isPhraseSaved, markPhraseSaved, generateNewFileName } from './utils/saveTracking';
 
 /**
@@ -31,10 +30,7 @@ const AppContent: React.FC = () => {
     setPhrase,
     updatePhrase,
     selectedNoteId,
-    setSelectedNoteId,
     selectedNote,
-    selectionSource,
-    setSelectionSource,
     inputMode,
     setInputMode,
     activeDuration,
@@ -49,7 +45,6 @@ const AppContent: React.FC = () => {
     setShowDegrees,
     updateSelectedNote,
     deleteNote,
-    deleteChord,
     updateMeasureCount,
     clearPhrase,
     newPhrase
@@ -79,6 +74,7 @@ const AppContent: React.FC = () => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isAIModeOpen, setIsAIModeOpen] = useState(false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'info' } | null>(null);
+  const [saveDraft, setSaveDraft] = useState<Phrase | null>(null);
 
   const canvasColors = { primary: '#000000', secondary: '#ffffff', error: '#fee2e2' };
   const { isPlaying, isLoaded, play, stop, previewNote, previewChord } = useAudio(phrase, playbackConfig);
@@ -130,13 +126,16 @@ const AppContent: React.FC = () => {
 
   const handleNewPhrase = () => {
     newPhrase();
+    setSaveDraft(null);
     showToast("New File Created", "info");
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
   const handleOpenSaveModal = () => {
     // 既に保存されているフレーズかチェック
-    if (isPhraseSaved(phrase.id)) {
+    setSaveDraft(null);
+    const isExistingPhrase = isPhraseSaved(phrase.id) || library.some((item) => item.id === phrase.id);
+    if (isExistingPhrase) {
       setIsSaveOptionsModalOpen(true);
     } else {
       setIsSaveModalOpen(true);
@@ -144,24 +143,32 @@ const AppContent: React.FC = () => {
   };
 
   const handleSaveConfirmed = async (name: string, tags: string[]) => {
-    const updatedPhrase = { ...phrase, name, tags };
+    const basePhrase = saveDraft ?? phrase;
+    const updatedPhrase: Phrase = { ...basePhrase, name, tags, updatedAt: Date.now() };
     setPhrase(updatedPhrase);
     await savePhrase(updatedPhrase);
     markPhraseSaved(updatedPhrase.id);
+    setSaveDraft(null);
     setIsSaveModalOpen(false);
     showToast("Saved to Disk");
   };
 
   const handleOverwriteSave = async () => {
     await savePhrase(phrase);
+    markPhraseSaved(phrase.id);
+    setSaveDraft(null);
     setIsSaveOptionsModalOpen(false);
     showToast("Overwrite Saved");
   };
 
   const handleSaveAsNew = () => {
-    const newName = generateNewFileName(phrase);
-    const newPhrase = { ...phrase, name: newName };
-    setPhrase(newPhrase);
+    const duplicatedPhrase: Phrase = {
+      ...phrase,
+      id: uuidv4(),
+      name: generateNewFileName(phrase),
+      updatedAt: Date.now()
+    };
+    setSaveDraft(duplicatedPhrase);
     setIsSaveOptionsModalOpen(false);
     setIsSaveModalOpen(true);
   };
@@ -183,6 +190,7 @@ const AppContent: React.FC = () => {
         deletePhraseFromLibrary(id);
         if (phrase.id === id) {
           newPhrase();
+          setSaveDraft(null);
         }
         setConfirmModal(null);
         showToast("Item Deleted");
@@ -259,7 +267,10 @@ const AppContent: React.FC = () => {
         handleNewPhrase={handleNewPhrase}
         library={filteredLibrary}
         currentPhraseId={phrase.id}
-        onSelectPhrase={setPhrase}
+        onSelectPhrase={(selectedPhrase) => {
+          setSaveDraft(null);
+          setPhrase(selectedPhrase);
+        }}
         onDeletePhrase={handleDeleteFromLibrary}
         onOpenHelp={() => setIsHelpOpen(true)}
       />
@@ -393,10 +404,13 @@ const AppContent: React.FC = () => {
 
       <SavePhraseModal
         isOpen={isSaveModalOpen}
-        initialName={phrase.name}
-        initialTags={phrase.tags || []}
+        initialName={(saveDraft ?? phrase).name}
+        initialTags={(saveDraft ?? phrase).tags || []}
         onSave={handleSaveConfirmed}
-        onCancel={() => setIsSaveModalOpen(false)}
+        onCancel={() => {
+          setSaveDraft(null);
+          setIsSaveModalOpen(false);
+        }}
       />
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
       <AIGenerationModal isOpen={isAIModeOpen} onClose={() => setIsAIModeOpen(false)} />

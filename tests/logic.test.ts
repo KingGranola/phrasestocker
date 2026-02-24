@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { keyToMidi, midiToKey, isNoteInRange, getChordNotes } from '../services/musicTheory';
 import { generatePhrase } from '../services/phraseGenerator';
-import { Phrase, MeasureData } from '../types';
-import { v4 as uuidv4 } from 'uuid';
+import { Phrase } from '../types';
 
 describe('Music Theory Logic', () => {
     it('converts key to midi correctly', () => {
@@ -72,7 +71,7 @@ describe('Phrase Generator', () => {
 
         const result = generatePhrase(mockPhrase, {
             density: 'high',
-            complexity: 'simple',
+            style: 40,
             targetMeasures: [0]
         });
 

@@ -2,17 +2,17 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>PhraseStocker</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
-              sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-              mono: ['"JetBrains Mono"', 'monospace'],
+              sans: ['"Space Grotesk"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+              mono: ['"IBM Plex Mono"', 'monospace'],
             },
             colors: {
               border: "var(--border-color)",
@@ -26,25 +26,24 @@
     </script>
     <style>
       :root {
-        /* Modern Dark Theme Palette (Slate based) */
-        --bg-body: #0f172a;   /* Slate 950 */
-        --bg-panel: #1e293b;  /* Slate 800 */
-        --bg-sub: #334155;    /* Slate 700 */
-        --bg-hover: #334155;
+        --bg-body: #0b1220;
+        --bg-panel: #142039;
+        --bg-sub: #213250;
+        --bg-hover: #2a3f61;
         
-        --text-main: #f1f5f9; /* Slate 100 */
-        --text-muted: #94a3b8; /* Slate 400 */
+        --text-main: #f2f6ff;
+        --text-muted: #8ea2c7;
         --text-inverse: #ffffff;
         
-        --border-color: #334155; /* Slate 700 */
+        --border-color: #2e4368;
         
-        --accent: #3b82f6;       /* Blue 500 */
-        --accent-hover: #2563eb; /* Blue 600 */
+        --accent: #2f84ff;
+        --accent-hover: #1f6de0;
         --accent-text: #ffffff;
         
         --danger: #ef4444;       /* Red 500 */
         
-        --radius: 8px;
+        --radius: 10px;
         --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
         --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -52,8 +51,12 @@
 
       body { 
         margin: 0; 
-        font-family: 'Inter', sans-serif;
+        font-family: 'Space Grotesk', sans-serif;
         background-color: var(--bg-body);
+        background-image:
+          radial-gradient(circle at 10% 10%, rgba(47, 132, 255, 0.16), transparent 35%),
+          radial-gradient(circle at 90% 0%, rgba(56, 189, 248, 0.14), transparent 30%),
+          linear-gradient(180deg, #0b1220 0%, #0b1220 50%, #0a0f1a 100%);
         color: var(--text-main);
         -webkit-font-smoothing: antialiased;
       }
@@ -73,7 +76,7 @@
         background-color: transparent;
         color: var(--text-muted);
         border-radius: 6px;
-        transition: all 0.2s;
+        transition: background-color 0.2s, color 0.2s, transform 0.15s, border-color 0.2s;
         cursor: pointer;
         font-weight: 500;
         border: 1px solid transparent;
@@ -86,6 +89,10 @@
       
       .app-btn:active:not(:disabled) {
         transform: translateY(1px);
+      }
+      .app-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
       }
 
       .app-btn-primary {
@@ -110,9 +117,15 @@
         outline: none;
         transition: border-color 0.2s;
       }
-      .app-input:focus {
+      .app-input:focus,
+      .app-input:focus-visible {
         border-color: var(--accent);
         box-shadow: 0 0 0 1px var(--accent);
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
       }
 
       /* Scrollbar */
@@ -137,25 +150,29 @@
 
       /* Custom Cursors */
       
-      /* Pencil Cursor (Blue Accent) - Hotspot at bottom left tip */
       .cursor-pencil {
-        cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMzYjgyZjYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTcgM2EyLjgyOCAyLjgyOCAwIDEgMSA0IDRMNy41IDIwLjUgMiAyMmwxLjUtNS41TDE3IDN6IiBmaWxsPSJyZ2JhKDU5L idealIDEzMCwgMjQ2LCAwLjEpIj48L3BhdGg+PC9zdmc+') 0 24, auto;
+        cursor: crosshair;
       }
 
-      /* Eraser Cursor (Red Danger) - Hotspot near bottom */
       .cursor-eraser {
-        cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNlZjQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJtMi45NyAxMi45MiA0LjA2IDQuMDZjLjM5LjM5IDEuMDIuMzkgMS40MSAwbDEyLjU5LTEyLjU5Yy4zOS0uMzkuMzktMS4wMiAwLTEuNDFsLTQuMDYtNC4wNmMtLjM5LS4zOS0xLjAyLS4zOS0xLjQxIDBMMi45NyAxMS41MWMtLjM5LjM5LS4zOSAxLjAyIDAgMS40MXoiIGZpbGw9InJnYmEoMjM5LCA2OCwgNjgsIDAuMSkiLz48cGF0aCBkPSJtNS44NiAxNy43Ny0zLjI0LTMuMjRhMiAyIDAgMCAxIDAtMi44M2w3LjA3LTcuMDdhMiAyIDAgMCAxIDIuODMgMGw3LjA3IDcuMDdhMiAyIDAgMCAxIDAgMi44M2wtMy4yNCAzLjI0Ii8+PC9zdmc+') 6 18, auto;
+        cursor: not-allowed;
       }
 
-      /* Select Cursor (Blue Arrow) - Matches Accent Color */
       .cursor-select {
-        cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMCAwTDEwLjE1IDI1LjM3IDEzLjAzIDE0Ljk2IDI0IDEwLjE1IDAgMHoiIGZpbGw9IiMzYjgyZjYiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIsIDIpIHNjYWxlKDAuOCkiLz48L3N2Zz4=') 0 0, default;
+        cursor: default;
       }
 
       /* Mobile Portrait Overlay Logic */
       @media screen and (orientation: portrait) and (max-width: 1024px) {
         .portrait-warning {
           display: flex !important;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
         }
       }
 
@@ -174,7 +191,6 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body class="h-screen overflow-hidden">
     <div id="root" class="h-full"></div>

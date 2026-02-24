@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { MeasureData, NoteData, NoteDuration, Phrase } from '../types';
-import { getChordNotes, getAccidentalsForContext, isNoteInRange, keyToMidi, midiToKey } from './musicTheory';
-import { calculateTabPosition } from './tabLogic';
+import { getAccidentalsForContext, keyToMidi, midiToKey } from './musicTheory';
 import { getAvailableScales, SCALES } from './ai/scaleDefinitions';
 import { selectTargetNote } from './ai/targetLogic';
 import { generatePath } from './ai/pathfinding';
@@ -13,12 +12,14 @@ export interface GenerationSettings {
     targetMeasures: number[]; // Indices of measures to generate for
 }
 
-const convertPitchFormat = (pitch: string): string => {
-    // Converts "C4" -> "c/4", "F#3" -> "f#/3", "Bb3" -> "bb/3"
-    const match = pitch.match(/^([A-G][#b]?)(-?\d+)$/);
-    if (!match) return 'c/4';
-    return `${match[1].toLowerCase()}/${match[2]}`;
+const noteDurationInBeats = (note: Pick<NoteData, 'duration' | 'dotted' | 'tuplet'>): number => {
+    let beats = note.duration in NOTE_DURATION_MAP ? NOTE_DURATION_MAP[note.duration] : 0;
+    if (note.dotted) beats *= 1.5;
+    if (note.tuplet) beats = (beats * 2) / 3;
+    return beats;
 };
+const NOTE_DURATION_MAP: Record<NoteDuration, number> = { w: 4, h: 2, q: 1, '8': 0.5, '16': 0.25, '32': 0.125 };
+const REST_FILL_ORDER: NoteDuration[] = ['q', '8', '16', '32'];
 
 export const generatePhrase = (
     currentPhrase: Phrase,
@@ -63,9 +64,6 @@ export const generatePhrase = (
 
         // Sort chords
         const sortedChords = [...chords].sort((a, b) => a.position - b.position);
-
-        // Track current beat position in measure
-        let currentBeatPos = 0.0;
 
         // For each chord, generate a phrase segment
         for (let cIdx = 0; cIdx < sortedChords.length; cIdx++) {
@@ -148,52 +146,31 @@ export const generatePhrase = (
                 }
             });
 
-            currentBeatPos += durationBeats;
         }
 
         // Final Duration Check & Fix
-        // Calculate total duration of generated notes
-        let totalDuration = 0;
-        newNotes.forEach(n => {
-            let durVal = n.duration === '8' ? 0.5 : n.duration === 'q' ? 1.0 : n.duration === 'h' ? 2.0 : n.duration === 'w' ? 4.0 : 0;
-            if (n.tuplet) {
-                // Triplet 8th: 3 notes = 1 beat. So 1 note = 0.333...
-                // But we generated them in groups of 3 for 1 beat.
-                // Simplified calculation: if tuplet, assume it's part of a 1-beat group.
-                // Actually, our generator subtracts 1.0 for 3 notes.
-                // So each note is 1/3 beat.
-                durVal = 1.0 / 3.0;
-            }
-            totalDuration += durVal;
-        });
-
-        // Round to avoid float errors
-        totalDuration = Math.round(totalDuration * 100) / 100;
+        const totalDuration = Number(newNotes.reduce((sum, note) => sum + noteDurationInBeats(note), 0).toFixed(4));
 
         // Fill remaining space with rest if any (or extend last note)
         if (totalDuration < beatsPerMeasure) {
-            const missing = beatsPerMeasure - totalDuration;
-            // Simplified filling
-            let remaining = missing;
-            while (remaining >= 0.5) {
-                let dur: NoteDuration = '8';
-                let val = 0.5;
-                if (remaining >= 1.0) {
-                    dur = 'q';
-                    val = 1.0;
-                }
-
+            let remaining = Number((beatsPerMeasure - totalDuration).toFixed(4));
+            let safety = 0;
+            while (remaining > 0.01 && safety < 64) {
+                const duration =
+                    REST_FILL_ORDER.find((candidate) => NOTE_DURATION_MAP[candidate] <= remaining + 0.0001) ?? '32';
+                const value = NOTE_DURATION_MAP[duration];
                 newNotes.push({
                     id: uuidv4(),
                     keys: ['b/4'], // Dummy key for rest
-                    duration: dur,
+                    duration,
                     isRest: true,
                     dotted: false,
                     accidentals: [],
                     string: 0,
                     fret: 0
                 });
-                remaining -= val;
+                remaining = Number((remaining - value).toFixed(4));
+                safety += 1;
             }
         }
 

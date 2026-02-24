@@ -1,6 +1,6 @@
 
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NoteDuration, InputMode } from '../types';
 import { Music, MousePointer2, Undo, Redo, Save, Trash2, Play, Square, Sliders, Eraser, FileAudio, FileCode, Loader2, Upload, Wand2 } from 'lucide-react';
 import clsx from 'clsx';
@@ -35,6 +35,23 @@ const DurationIcon: React.FC<{ duration: NoteDuration }> = ({ duration }) => {
 
 const Toolbar: React.FC<ToolbarProps> = (props) => {
   const [showMixer, setShowMixer] = useState(false);
+  const [bpmInput, setBpmInput] = useState(() => String(props.bpm));
+
+  useEffect(() => {
+    setBpmInput(String(props.bpm));
+  }, [props.bpm]);
+
+  const commitBpm = () => {
+    const parsed = Number.parseInt(bpmInput, 10);
+    if (Number.isNaN(parsed)) {
+      setBpmInput(String(props.bpm));
+      return;
+    }
+    const clamped = Math.max(40, Math.min(280, parsed));
+    props.setBpm(clamped);
+    setBpmInput(String(clamped));
+  };
+
   return (
     <div className="flex items-center justify-between w-full h-12 px-2 select-none">
       <div className="flex items-center gap-1 overflow-x-auto overflow-y-hidden scrollbar-none flex-1 pr-4">
@@ -57,9 +74,9 @@ const Toolbar: React.FC<ToolbarProps> = (props) => {
         <Separator />
         {/* Accidentals */}
         <div className="flex items-center gap-1">
-          <ToolBtn isActive={props.activeAccidental === 'flat'} onClick={() => props.onAccidental('flat')} title="Flat"><span className="font-serif italic text-lg">♭</span></ToolBtn>
-          <ToolBtn isActive={props.activeAccidental === 'natural'} onClick={() => props.onAccidental('natural')} title="Natural"><span className="font-serif text-lg">♮</span></ToolBtn>
-          <ToolBtn isActive={props.activeAccidental === 'sharp'} onClick={() => props.onAccidental('sharp')} title="Sharp"><span className="font-serif italic text-lg">♯</span></ToolBtn>
+          <ToolBtn isActive={props.activeAccidental === 'flat'} onClick={() => props.onAccidental('flat')} title="Flat" disabled={!props.hasSelection}><span className="font-serif italic text-lg">♭</span></ToolBtn>
+          <ToolBtn isActive={props.activeAccidental === 'natural'} onClick={() => props.onAccidental('natural')} title="Natural" disabled={!props.hasSelection}><span className="font-serif text-lg">♮</span></ToolBtn>
+          <ToolBtn isActive={props.activeAccidental === 'sharp'} onClick={() => props.onAccidental('sharp')} title="Sharp" disabled={!props.hasSelection}><span className="font-serif italic text-lg">♯</span></ToolBtn>
         </div>
         <Separator />
         {/* Edit Actions */}
@@ -72,7 +89,24 @@ const Toolbar: React.FC<ToolbarProps> = (props) => {
             {!props.isLoaded ? (<><Loader2 size={12} className="animate-spin" /> LOADING...</>) : (<>{props.isPlaying ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}{props.isPlaying ? 'STOP' : 'PLAY'}</>)}
           </button>
           <div className="w-px h-full bg-[var(--border-color)]"></div>
-          <div className="flex items-center px-2 py-1 gap-1"><span className="text-[10px] text-[var(--text-muted)] font-bold">BPM</span><input type="number" value={props.bpm} onChange={e => props.setBpm(parseInt(e.target.value))} className="w-10 bg-transparent outline-none text-right font-mono text-xs text-[var(--text-main)]" /></div>
+          <div className="flex items-center px-2 py-1 gap-1">
+            <span className="text-[10px] text-[var(--text-muted)] font-bold">BPM</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={bpmInput}
+              onChange={(e) => setBpmInput(e.target.value.replace(/[^\d]/g, ''))}
+              onBlur={commitBpm}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur();
+                }
+              }}
+              className="w-10 bg-transparent outline-none text-right font-mono text-xs text-[var(--text-main)]"
+              aria-label="Tempo BPM"
+            />
+          </div>
           <div className="w-px h-full bg-[var(--border-color)]"></div>
           <button onClick={() => setShowMixer(!showMixer)} className={clsx("p-2 hover:text-[var(--text-main)] active:bg-[var(--bg-sub)]", showMixer ? "text-[var(--accent)]" : "text-[var(--text-muted)]")}><Sliders size={14} /></button>
         </div>
@@ -91,7 +125,7 @@ const Toolbar: React.FC<ToolbarProps> = (props) => {
         <Separator />
         {/* AI & Destructive */}
         <div className="flex items-center gap-1">
-          <button onClick={props.onGenerate} className="app-btn w-8 h-8 p-0 text-purple-500 hover:text-purple-600 hover:bg-purple-500/10 active:scale-95" title="AI Generate (beta)"><Wand2 size={16} /></button>
+          <button onClick={props.onGenerate} className="app-btn w-8 h-8 p-0 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10 active:scale-95" title="AI Generate (beta)"><Wand2 size={16} /></button>
           <button onClick={props.onClear} className="app-btn w-8 h-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-500/10 active:scale-95" title="Clear Score"><Trash2 size={16} /></button>
         </div>
       </div>

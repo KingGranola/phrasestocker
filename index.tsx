@@ -1,6 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { initializeMobile } from './mobile-setup';
+
+// Initialize mobile features if running on Capacitor
+initializeMobile();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

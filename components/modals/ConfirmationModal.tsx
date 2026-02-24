@@ -30,7 +30,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     </button>
                     <button
                         onClick={onConfirm}
-                        className="app-btn bg-red-500 text-white hover:bg-red600 border-red-500 flex-1 py-2"
+                        className="app-btn bg-red-500 text-white hover:bg-red-600 border-red-500 flex-1 py-2"
                     >
                         Confirm
                     </button>

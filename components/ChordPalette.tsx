@@ -1,6 +1,6 @@
 
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getAllChords } from '../services/chordLogic';
 import clsx from 'clsx';
 import { Music2 } from 'lucide-react';
@@ -21,7 +21,11 @@ const ChordCard: React.FC<{ chord: string; degree?: string; onClick: () => void;
 const ChordPalette: React.FC<ChordPaletteProps> = ({ currentKey, currentScale, onChordClick, onKeyChange, onScaleChange, keys }) => {
   const categories = getAllChords(currentKey, currentScale);
   const [activeTab, setActiveTab] = useState(0);
-  if (activeTab >= categories.length) setActiveTab(0);
+  useEffect(() => {
+      if (activeTab >= categories.length) {
+          setActiveTab(0);
+      }
+  }, [activeTab, categories.length]);
   const activeCategory = categories[activeTab];
   const getDegreeLabel = (index: number) => {
       if (!activeCategory || !activeCategory.name.includes('ダイアトニック')) return undefined;

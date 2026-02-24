@@ -4,8 +4,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const isMobileBuild = process.env.MOBILE_BUILD === 'true';
+
   return {
-    base: '/phrasestocker/', // GitHub Pagesのリポジトリ名に合わせる
+    base: isMobileBuild ? '/' : '/phrasestocker/', // Use root path for mobile, GitHub Pages path for web
     server: {
       port: 3000,
       host: '0.0.0.0',

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generatePhrase, GenerationSettings } from '../services/phraseGenerator';
-import { Phrase, MeasureData } from '../types';
+import { Phrase } from '../types';
+import { DURATION_VALUES } from '../constants';
 
 // Mock Phrase Data
 const mockPhrase: Phrase = {
@@ -49,9 +50,12 @@ describe('AI Generation - Integration', () => {
 
             let totalDuration = 0;
             measure.notes.forEach(n => {
-                let val = n.duration === '8' ? 0.5 : n.duration === 'q' ? 1.0 : n.duration === 'h' ? 2.0 : n.duration === 'w' ? 4.0 : 0;
+                let val = DURATION_VALUES[n.duration] ?? 0;
+                if (n.dotted) {
+                    val *= 1.5;
+                }
                 if (n.tuplet) {
-                    val = 1.0 / 3.0;
+                    val = (val * 2) / 3;
                 }
                 totalDuration += val;
             });
