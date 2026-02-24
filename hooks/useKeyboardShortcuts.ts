@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { useEditor } from '../contexts/EditorContext';
 import { calculateTabPosition, getValidTabPositions } from '../services/tabLogic';
 import { getPitchFromVisual, shiftPitchVisual, shiftPitchChromatic, isNoteInRange, getAccidentalsForContext } from '../services/musicTheory';
@@ -9,13 +10,17 @@ interface UseKeyboardShortcutsProps {
     play: () => void;
     stop: () => void;
     previewNote: (pitch: string, instrument: 'guitar' | 'bass') => void;
+    onUndo?: () => void;
+    onRedo?: () => void;
 }
 
 export const useKeyboardShortcuts = ({
     isPlaying,
     play,
     stop,
-    previewNote
+    previewNote,
+    onUndo,
+    onRedo
 }: UseKeyboardShortcutsProps) => {
     const {
         phrase,
@@ -23,10 +28,8 @@ export const useKeyboardShortcuts = ({
         selectedNoteId,
         setSelectedNoteId,
         selectedNote,
-        selectionSource,
         inputMode,
         setInputMode,
-        activeDuration,
         setActiveDuration,
         isDotted,
         setIsDotted,
@@ -40,11 +43,36 @@ export const useKeyboardShortcuts = ({
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+            if (
+                e.target instanceof HTMLInputElement ||
+                e.target instanceof HTMLSelectElement ||
+                e.target instanceof HTMLTextAreaElement ||
+                (e.target instanceof HTMLElement && e.target.isContentEditable)
+            ) {
+                return;
+            }
+
             const key = e.key.toLowerCase();
+            const hasPrimaryModifier = e.metaKey || e.ctrlKey;
+
+            // Undo / Redo (Cmd/Ctrl + Z, Cmd/Ctrl + Shift + Z, Cmd/Ctrl + Y)
+            if (hasPrimaryModifier && key === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    onRedo?.();
+                } else {
+                    onUndo?.();
+                }
+                return;
+            }
+            if (hasPrimaryModifier && key === 'y') {
+                e.preventDefault();
+                onRedo?.();
+                return;
+            }
 
             // Mode switching
-            if (key === 'n') {
+            if (!hasPrimaryModifier && !e.altKey && key === 'n') {
                 setInputMode(inputMode === 'entry' ? 'select' : 'entry');
                 setSelectedNoteId(null);
                 return;
@@ -54,8 +82,8 @@ export const useKeyboardShortcuts = ({
                 setSelectedNoteId(null);
                 return;
             }
-            if (key === 's') setInputMode('select');
-            if (key === 'e') {
+            if (!hasPrimaryModifier && !e.altKey && key === 's') setInputMode('select');
+            if (!hasPrimaryModifier && !e.altKey && key === 'e') {
                 setInputMode(inputMode === 'eraser' ? 'select' : 'eraser');
                 setSelectedNoteId(null);
                 return;
@@ -67,29 +95,136 @@ export const useKeyboardShortcuts = ({
                 isPlaying ? stop() : play();
             }
 
-            // Duration
-            if (['1', '2', '4', '8'].includes(key)) {
-                const map: Record<string, NoteDuration> = { '1': 'w', '2': 'h', '4': 'q', '8': '8' };
+            // Duration (MuseScore-like: 3=16th, 4=8th, 5=quarter, 6=half, 7=whole)
+            if (!hasPrimaryModifier && !e.altKey && ['1', '2', '3', '4', '5', '6', '7', '8'].includes(key)) {
+                const map: Record<string, NoteDuration> = {
+                    '1': '32',
+                    '2': '32',
+                    '3': '16',
+                    '4': '8',
+                    '5': 'q',
+                    '6': 'h',
+                    '7': 'w',
+                    '8': '8'
+                };
                 const newDuration = map[key];
                 setActiveDuration(newDuration);
                 updateSelectedNote({ duration: newDuration });
+                return;
             }
 
             // Modifiers
-            if (key === '.') {
+            if (!hasPrimaryModifier && !e.altKey && key === '.') {
                 const newVal = !isDotted;
                 setIsDotted(newVal);
                 updateSelectedNote({ dotted: newVal });
+                return;
             }
-            if (key === '0') {
+            if (!hasPrimaryModifier && !e.altKey && key === '0') {
                 const newVal = !isRest;
                 setIsRest(newVal);
                 updateSelectedNote({ isRest: newVal });
+                return;
             }
-            if (key === '3') {
+            if (!hasPrimaryModifier && !e.altKey && key === 't') {
                 const newVal = !isTriplet;
                 setIsTriplet(newVal);
                 updateSelectedNote({ tuplet: newVal });
+                return;
+            }
+
+            // Accidentals for selected note: '-' flat, '=' natural, '+' sharp
+            if (selectedNoteId && selectedNote && !selectedNote.isRest && !hasPrimaryModifier && !e.altKey) {
+                const [notePart, octave] = selectedNote.keys[0].split('/');
+                const letter = notePart.charAt(0).toLowerCase();
+                if (e.code === 'Minus') {
+                    const newKey = `${letter}b/${octave}`;
+                    if (isNoteInRange(newKey, phrase.instrument)) {
+                        const tabPos = calculateTabPosition(newKey, phrase.instrument);
+                        updateSelectedNote({
+                            keys: [newKey],
+                            accidentals: ['b'],
+                            string: tabPos.string,
+                            fret: tabPos.fret,
+                            isManualTab: false
+                        });
+                        previewNote(newKey, phrase.instrument);
+                    }
+                    return;
+                }
+                if (e.code === 'Equal') {
+                    const newKey = e.shiftKey ? `${letter}#/${octave}` : `${letter}/${octave}`;
+                    if (isNoteInRange(newKey, phrase.instrument)) {
+                        const tabPos = calculateTabPosition(newKey, phrase.instrument);
+                        updateSelectedNote({
+                            keys: [newKey],
+                            accidentals: e.shiftKey ? ['#'] : ['n'],
+                            string: tabPos.string,
+                            fret: tabPos.fret,
+                            isManualTab: false
+                        });
+                        previewNote(newKey, phrase.instrument);
+                    }
+                    return;
+                }
+            }
+
+            // Letter pitch entry for selected note in note-input mode
+            if (
+                selectedNoteId &&
+                selectedNote &&
+                !selectedNote.isRest &&
+                inputMode === 'entry' &&
+                !hasPrimaryModifier &&
+                !e.altKey &&
+                !e.shiftKey &&
+                /^[a-g]$/.test(key)
+            ) {
+                const [, octave] = selectedNote.keys[0].split('/');
+                const logicalKey = getPitchFromVisual(`${key}/${octave}`, phrase.keySignature);
+                if (isNoteInRange(logicalKey, phrase.instrument)) {
+                    const tabPos = calculateTabPosition(logicalKey, phrase.instrument);
+                    updateSelectedNote({
+                        keys: [logicalKey],
+                        accidentals: getAccidentalsForContext(logicalKey, phrase.keySignature),
+                        string: tabPos.string,
+                        fret: tabPos.fret,
+                        isManualTab: false
+                    });
+                    previewNote(logicalKey, phrase.instrument);
+                }
+                return;
+            }
+
+            // Repeat selected note (MuseScore-style R)
+            if (selectedNoteId && !hasPrimaryModifier && !e.altKey && key === 'r') {
+                e.preventDefault();
+                let clonedNoteId: string | null = null;
+                let clonedPitch: string | null = null;
+
+                const updatedPhrase = {
+                    ...phrase,
+                    measures: phrase.measures.map(m => {
+                        const index = m.notes.findIndex(n => n.id === selectedNoteId);
+                        if (index === -1) return m;
+                        const original = m.notes[index];
+                        clonedNoteId = uuidv4();
+                        const clone = { ...original, id: clonedNoteId };
+                        clonedPitch = clone.isRest ? null : clone.keys[0];
+                        return {
+                            ...m,
+                            notes: [...m.notes.slice(0, index + 1), clone, ...m.notes.slice(index + 1)]
+                        };
+                    })
+                };
+                setPhrase(updatedPhrase);
+                if (clonedNoteId) {
+                    setSelectedNoteId(clonedNoteId);
+                }
+                if (clonedPitch) {
+                    previewNote(clonedPitch, phrase.instrument);
+                }
+                return;
             }
 
             // Deletion
@@ -97,6 +232,20 @@ export const useKeyboardShortcuts = ({
                 if (selectedNoteId) {
                     deleteNote(selectedNoteId);
                 }
+                return;
+            }
+
+            // Horizontal navigation between notes
+            if (selectedNoteId && (key === 'arrowleft' || key === 'arrowright') && !hasPrimaryModifier && !e.altKey && !e.shiftKey) {
+                e.preventDefault();
+                const orderedNoteIds = phrase.measures.flatMap(m => m.notes.map(n => n.id));
+                const index = orderedNoteIds.indexOf(selectedNoteId);
+                if (index === -1) return;
+                const nextIndex = key === 'arrowleft'
+                    ? Math.max(0, index - 1)
+                    : Math.min(orderedNoteIds.length - 1, index + 1);
+                setSelectedNoteId(orderedNoteIds[nextIndex]);
+                return;
             }
 
             // Navigation / Pitch Change
@@ -104,23 +253,14 @@ export const useKeyboardShortcuts = ({
                 e.preventDefault();
                 const dir = key === 'arrowup' ? 1 : -1;
 
-                // We need to update the phrase directly here because we need complex logic 
-                // that depends on the current state of the note which might not be fully reflected 
-                // in 'selectedNote' if we just used updateSelectedNote for everything (esp. for multi-property updates)
-                // However, we can try to use updateSelectedNote if possible, but the original code used setPhrase map.
-                // Let's stick to the original logic for safety but adapted to use setPhrase from context.
-
-                // Actually, we can use the logic from App.tsx but we need access to the current phrase state.
-                // 'phrase' is available from useEditor().
-
                 const updatedPhrase = {
                     ...phrase,
                     measures: phrase.measures.map(m => ({
                         ...m,
                         notes: m.notes.map(n => {
                             if (n.id === selectedNoteId && !n.isRest) {
-                                // String/Fret navigation (Ctrl + Arrow)
-                                if (e.ctrlKey) {
+                                // String/Fret navigation (Ctrl/Cmd + Alt + Arrow)
+                                if ((e.ctrlKey || e.metaKey) && e.altKey) {
                                     const valid = getValidTabPositions(n.keys[0], phrase.instrument);
                                     if (valid.length < 1) return n;
                                     let currIdx = valid.findIndex(p => p.string === (n.string || 0) && p.fret === (n.fret || 0));
@@ -131,11 +271,14 @@ export const useKeyboardShortcuts = ({
                                     return { ...n, string: valid[nextIdx].string, fret: valid[nextIdx].fret, isManualTab: true };
                                 }
 
-                                // Pitch change
-                                const isChromatic = e.shiftKey || selectionSource === 'tab';
-                                const logicalKey = isChromatic
-                                    ? shiftPitchChromatic(n.keys[0], dir, phrase.keySignature)
-                                    : getPitchFromVisual(shiftPitchVisual(n.keys[0], dir), phrase.keySignature);
+                                // Pitch change:
+                                // default = chromatic semitone, Alt+Shift = diatonic, Ctrl/Cmd = octave
+                                const logicalKey =
+                                    (e.metaKey || e.ctrlKey)
+                                        ? shiftPitchChromatic(n.keys[0], dir * 12, phrase.keySignature)
+                                        : (e.altKey && e.shiftKey)
+                                            ? getPitchFromVisual(shiftPitchVisual(n.keys[0], dir), phrase.keySignature)
+                                            : shiftPitchChromatic(n.keys[0], dir, phrase.keySignature);
 
                                 if (!isNoteInRange(logicalKey, phrase.instrument)) return n;
 
@@ -154,15 +297,16 @@ export const useKeyboardShortcuts = ({
                     }))
                 };
                 setPhrase(updatedPhrase);
+                return;
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [
-        phrase, setPhrase, selectedNoteId, setSelectedNoteId, inputMode, setInputMode,
-        activeDuration, setActiveDuration, isDotted, setIsDotted, isRest, setIsRest,
+        phrase, setPhrase, selectedNoteId, setSelectedNoteId, selectedNote, inputMode, setInputMode,
+        setActiveDuration, isDotted, setIsDotted, isRest, setIsRest,
         isTriplet, setIsTriplet, updateSelectedNote, deleteNote, isPlaying, play, stop,
-        previewNote, selectionSource
+        previewNote, onUndo, onRedo
     ]);
 };

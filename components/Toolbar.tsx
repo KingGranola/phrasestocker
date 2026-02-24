@@ -14,6 +14,7 @@ interface ToolbarProps {
   isRest: boolean; toggleRest: () => void;
   isTriplet: boolean; toggleTriplet: () => void;
   onUndo: () => void; onRedo: () => void;
+  canUndo?: boolean; canRedo?: boolean;
   onSave: () => void; onClear: () => void; onDeleteSelected: () => void; hasSelection: boolean;
   isPlaying: boolean; onPlayToggle: () => void; isLoaded: boolean;
   bpm: number; setBpm: (bpm: number) => void;
@@ -29,8 +30,8 @@ const ToolBtn: React.FC<{ isActive?: boolean; onClick: () => void; title: string
 );
 const Separator = () => <div className="w-px h-6 bg-[var(--border-color)] mx-2 shrink-0"></div>;
 const DurationIcon: React.FC<{ duration: NoteDuration }> = ({ duration }) => {
-  const notes: Record<string, string> = { 'w': '𝅝', 'h': '𝅗', 'q': '♩', '8': '♪', '16': '𝅘𝅥𝅯' };
-  return <span className="text-xl leading-none font-serif">{notes[duration]}</span>;
+  const notes: Record<string, string> = { w: '𝅝', h: '𝅗', q: '♩', '8': '♪', '16': '𝅘𝅥𝅯', '32': '𝅘𝅥𝅰' };
+  return <span className="text-xl leading-none font-serif">{notes[duration] ?? duration}</span>;
 };
 
 const Toolbar: React.FC<ToolbarProps> = (props) => {
@@ -63,12 +64,12 @@ const Toolbar: React.FC<ToolbarProps> = (props) => {
         </div>
         <Separator />
         {/* Note Duration */}
-        <div className="flex items-center gap-1">{(['w', 'h', 'q', '8', '16'] as NoteDuration[]).map((d) => (<ToolBtn key={d} isActive={props.activeDuration === d} onClick={() => props.setDuration(d)} title={d}><DurationIcon duration={d} /></ToolBtn>))}</div>
+        <div className="flex items-center gap-1">{(['w', 'h', 'q', '8', '16', '32'] as NoteDuration[]).map((d) => (<ToolBtn key={d} isActive={props.activeDuration === d} onClick={() => props.setDuration(d)} title={d}><DurationIcon duration={d} /></ToolBtn>))}</div>
         <Separator />
         {/* Note Properties */}
         <div className="flex items-center gap-1">
           <ToolBtn isActive={props.isDotted} onClick={props.toggleDotted} title="Dotted (.)"><div className="w-1 h-1 rounded-full bg-current mb-1"></div><span className="text-[10px] font-bold absolute bottom-1 right-1">.</span></ToolBtn>
-          <ToolBtn isActive={props.isTriplet} onClick={props.toggleTriplet} title="Triplet (3)"><span className="text-xs font-bold font-mono">3</span></ToolBtn>
+          <ToolBtn isActive={props.isTriplet} onClick={props.toggleTriplet} title="Triplet (T)"><span className="text-xs font-bold font-mono">3</span></ToolBtn>
           <ToolBtn isActive={props.isRest} onClick={props.toggleRest} title="Rest (0)"><span className="text-sm font-bold font-serif">𝄽</span></ToolBtn>
         </div>
         <Separator />
@@ -80,7 +81,10 @@ const Toolbar: React.FC<ToolbarProps> = (props) => {
         </div>
         <Separator />
         {/* Edit Actions */}
-        <div className="flex items-center gap-1"><button onClick={props.onUndo} className="app-btn w-8 h-8 p-0 active:scale-95" title="Undo"><Undo size={14} /></button><button onClick={props.onRedo} className="app-btn w-8 h-8 p-0 active:scale-95" title="Redo"><Redo size={14} /></button></div>
+        <div className="flex items-center gap-1">
+          <button onClick={props.onUndo} disabled={!props.canUndo} className="app-btn w-8 h-8 p-0 active:scale-95" title="Undo (Cmd/Ctrl+Z)"><Undo size={14} /></button>
+          <button onClick={props.onRedo} disabled={!props.canRedo} className="app-btn w-8 h-8 p-0 active:scale-95" title="Redo (Cmd/Ctrl+Shift+Z)"><Redo size={14} /></button>
+        </div>
       </div>
       <div className="flex items-center gap-3 shrink-0 relative">
         {/* Playback */}

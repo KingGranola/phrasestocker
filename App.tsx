@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { KEYS } from './constants';
 import ScoreCanvas from './components/ScoreCanvas';
@@ -75,6 +75,10 @@ const AppContent: React.FC = () => {
   const [isAIModeOpen, setIsAIModeOpen] = useState(false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'info' } | null>(null);
   const [saveDraft, setSaveDraft] = useState<Phrase | null>(null);
+  const [undoStack, setUndoStack] = useState<Phrase[]>([]);
+  const [redoStack, setRedoStack] = useState<Phrase[]>([]);
+  const isApplyingHistoryRef = useRef(false);
+  const previousPhraseRef = useRef<Phrase>(phrase);
 
   const canvasColors = { primary: '#000000', secondary: '#ffffff', error: '#fee2e2' };
   const { isPlaying, isLoaded, play, stop, previewNote, previewChord } = useAudio(phrase, playbackConfig);
@@ -104,6 +108,48 @@ const AppContent: React.FC = () => {
     setNotification({ message, type });
   };
 
+  useEffect(() => {
+    if (isApplyingHistoryRef.current) {
+      isApplyingHistoryRef.current = false;
+      previousPhraseRef.current = phrase;
+      return;
+    }
+
+    const previousPhrase = previousPhraseRef.current;
+    if (previousPhrase !== phrase) {
+      setUndoStack((current) => [...current.slice(-99), previousPhrase]);
+      setRedoStack([]);
+      previousPhraseRef.current = phrase;
+    }
+  }, [phrase]);
+
+  const resetHistory = (skipNextUpdate: boolean = false) => {
+    isApplyingHistoryRef.current = skipNextUpdate;
+    previousPhraseRef.current = phrase;
+    setUndoStack([]);
+    setRedoStack([]);
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const previous = undoStack[undoStack.length - 1];
+    isApplyingHistoryRef.current = true;
+    setUndoStack((current) => current.slice(0, -1));
+    setRedoStack((current) => [...current.slice(-99), phrase]);
+    previousPhraseRef.current = previous;
+    setPhrase(previous);
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    isApplyingHistoryRef.current = true;
+    setRedoStack((current) => current.slice(0, -1));
+    setUndoStack((current) => [...current.slice(-99), phrase]);
+    previousPhraseRef.current = next;
+    setPhrase(next);
+  };
+
   const handleDurationChange = (duration: typeof activeDuration) => {
     setActiveDuration(duration);
     updateSelectedNote({ duration });
@@ -125,6 +171,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleNewPhrase = () => {
+    resetHistory(true);
     newPhrase();
     setSaveDraft(null);
     showToast("New File Created", "info");
@@ -189,6 +236,7 @@ const AppContent: React.FC = () => {
       onConfirm: () => {
         deletePhraseFromLibrary(id);
         if (phrase.id === id) {
+          resetHistory(true);
           newPhrase();
           setSaveDraft(null);
         }
@@ -233,7 +281,7 @@ const AppContent: React.FC = () => {
   };
 
   // Custom Hooks
-  useKeyboardShortcuts({ isPlaying, play, stop, previewNote });
+  useKeyboardShortcuts({ isPlaying, play, stop, previewNote, onUndo: handleUndo, onRedo: handleRedo });
   const { handleNoteSelect, handleCanvasClick, handleNoteDrag, handleChordDrop, handleChordClick } = useScoreInteractions({ previewNote });
 
   const filteredLibrary = searchLibrary(searchQuery);
@@ -268,8 +316,9 @@ const AppContent: React.FC = () => {
         library={filteredLibrary}
         currentPhraseId={phrase.id}
         onSelectPhrase={(selectedPhrase) => {
+          resetHistory(true);
           setSaveDraft(null);
-          setPhrase(selectedPhrase);
+          setPhrase(structuredClone(selectedPhrase));
         }}
         onDeletePhrase={handleDeleteFromLibrary}
         onOpenHelp={() => setIsHelpOpen(true)}
@@ -296,8 +345,10 @@ const AppContent: React.FC = () => {
             toggleRest={handleRestToggle}
             isTriplet={isTriplet}
             toggleTriplet={handleTripletToggle}
-            onUndo={() => { }}
-            onRedo={() => { }}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={undoStack.length > 0}
+            canRedo={redoStack.length > 0}
             onSave={handleOpenSaveModal}
             onClear={handleClear}
             onDeleteSelected={handleDeleteSelected}
@@ -316,6 +367,16 @@ const AppContent: React.FC = () => {
             onImport={handleImport}
             onGenerate={() => setIsAIModeOpen(true)}
           />
+          <div className="px-4 py-1.5 border-t border-[var(--border-color)] bg-[var(--bg-body)] text-[10px] text-[var(--text-muted)] font-mono flex flex-wrap gap-x-4 gap-y-1">
+            <span>Mode: {inputMode.toUpperCase()}</span>
+            <span>Durations: 3/4/5/6/7</span>
+            <span>Pitch: ↑↓ semitone</span>
+            <span>Alt+Shift+↑↓ diatonic</span>
+            <span>Cmd/Ctrl+↑↓ octave</span>
+            <span>Accidental: - / = / +</span>
+            <span>Repeat: R</span>
+            <span>Undo/Redo: Cmd/Ctrl+Z / Shift+Z</span>
+          </div>
         </div>
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-auto bg-[var(--bg-sub)] p-4 lg:p-8 shadow-inner relative" ref={canvasContainerRef}>
